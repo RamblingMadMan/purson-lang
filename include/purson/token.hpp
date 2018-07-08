@@ -4,13 +4,15 @@
 #include "location.hpp"
 
 namespace purson{
-	//! self-explanatory
+	/**
+	 * The type of token
+	 **/
 	enum class token_type{
 		id, keyword, type, op, bracket, integer, real, string, ch, end, eof
 	};
 	
 	/**
-	 * A code token
+	 * A source code token
 	 **/
 	class token{
 		public:

@@ -2,14 +2,16 @@
 #define PURSON_TYPES_HPP 1
 
 /**
+ * @headerfile types.hpp
+ * 
  * Constructs describing the type system of purson
  * 
  * Purson is statically typed, but types are usually inferred.
  **/
 
 namespace purson{
-	//! base type of all types
-	//! programming tool and implementation detail
+	//! Base type of all types.
+	//! Programming tool and implementation detail
 	class type{
 		public:
 			virtual ~type() = default;

@@ -1,6 +1,11 @@
 # build environment related files/dirs
 build
 .kdev4
+doc
 
 .directory
-plang.kdev4
+purson-lang.kdev4
+
+# submodule directories
+fmt
+utfcpp
