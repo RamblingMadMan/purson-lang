@@ -12,15 +12,6 @@ matrix:
           packages:
             - g++-7
       env: COMPILER=g++-7
-    - compiler: clang
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-trusty-4.0
-          packages:
-            - clang-4.0
-      env: COMPILER=clang++-4.0
 
 before_install:
   - sudo apt-get update -qq
