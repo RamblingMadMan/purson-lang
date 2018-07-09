@@ -19,6 +19,7 @@ matrix:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-3.9
           packages:
+            - g++-7
             - clang-3.9
       env: COMPILER=clang++-3.9
 
