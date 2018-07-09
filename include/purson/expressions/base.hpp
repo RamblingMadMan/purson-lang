@@ -1,13 +1,17 @@
-#ifndef PURSON_EXPRESSION_HPP
-#define PURSON_EXPRESSION_HPP 1
+#ifndef PURSON_EXPRESSIONS_BASE_HPP
+#define PURSON_EXPRESSIONS_BASE_HPP 1
 
-#include "types.hpp"
+#include "../exception.hpp"
+#include "../types/base.hpp"
 
 namespace purson{
+	class expression_error: public exception{ using exception::exception; };
+	
+	//! base for all expressions
 	class expr{
 		public:
 			virtual ~expr() = default;
-			virtual std::string str() const noexcept = 0;
+			//virtual std::string str() const noexcept = 0;
 	};
 	
 	//! base for all expressions with a value
@@ -23,4 +27,4 @@ namespace purson{
 	class lvalue_expr: public rvalue_expr{};
 }
 
-#endif // !PURSON_EXPRESSION_HPP
+#endif // !PURSON_EXPRESSIONS_BASE_HPP

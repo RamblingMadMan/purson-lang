@@ -3,7 +3,7 @@
 #include <fmt/format.h>
 
 namespace purson{
-	void op::set_op(binary_op_tag_t, std::optional<operator_type> op_ty_opt, const arithmetic_type *lhs, const arithmetic_type *rhs){
+	void op::set_op(binary_op_tag_t, std::optional<operator_type> op_ty_opt, const type *lhs, const type *rhs){
 		if(!op_ty_opt) throw operator_error{"invalid binary operator '{}'"};
 		
 		auto &op_ty = op_ty_opt.value();
@@ -16,9 +16,10 @@ namespace purson{
 		
 		m_bin = true;
 		m_op_type = op_ty;
+		m_result_type = nullptr;
 	}
 	
-	void op::set_op(unary_op_tag_t, std::optional<operator_type> op_ty_opt, const arithmetic_type *operand){
+	void op::set_op(unary_op_tag_t, std::optional<operator_type> op_ty_opt, const type *operand){
 		if(!op_ty_opt) throw operator_error{"invalid unary operator '{}'"};
 		
 		auto &op_ty = op_ty_opt.value();
@@ -37,10 +38,6 @@ namespace purson{
 		
 		m_bin = false;
 		m_op_type = op_ty;
+		m_result_type = nullptr;
 	}
-	
-	/*
-	
-	
-	*/
 }

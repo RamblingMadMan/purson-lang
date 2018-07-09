@@ -20,7 +20,7 @@ namespace purson{
 		inc, dec
 	};
 	
-	std::optional<operator_type> op_type_from_str(std::string_view str){
+	inline std::optional<operator_type> op_type_from_str(std::string_view str){
 		if(!str.size()) return std::nullopt;
 		else if(str.size() == 1){
 			switch(str[0]){
@@ -43,27 +43,32 @@ namespace purson{
 	
 	class op{
 		public:
-			op(binary_op_tag_t, std::optional<operator_type> op_ty, const arithmetic_type *lhs, const arithmetic_type *rhs){
+			op(binary_op_tag_t, std::optional<operator_type> op_ty, const type *lhs, const type *rhs){
 				set_op(binary_op, op_ty, lhs, rhs);
 			}
 			
-			template<typename OpVal>
-			op(unary_op_tag_t, std::optional<operator_type> op_ty, const arithmetic_type *operand){
+			op(unary_op_tag_t, std::optional<operator_type> op_ty, const type *operand){
 				set_op(unary_op, op_ty, operand);
 			}
+			
+			op(const op&) = default;
+			
+			op &operator =(const op&) = default;
 			
 			// fn is_binary() => m_bin;
 			bool is_binary() const noexcept{ return m_bin; }
 			bool is_unary() const noexcept{ return !m_bin; }
 			
 			operator_type op_type() const noexcept{ return m_op_type; }
+			const type *result_type() const noexcept{ return m_result_type; }
 			
 		private:
 			bool m_bin;
 			operator_type m_op_type;
+			const type *m_result_type;
 			
-			void set_op(binary_op_tag_t, std::optional<operator_type> op_ty_opt, const arithmetic_type *lhs, const arithmetic_type *rhs);
-			void set_op(unary_op_tag_t, std::optional<operator_type> op_ty_opt, const arithmetic_type *operand);
+			void set_op(binary_op_tag_t, std::optional<operator_type> op_ty_opt, const type *lhs, const type *rhs);
+			void set_op(unary_op_tag_t, std::optional<operator_type> op_ty_opt, const type *operand);
 	};
 }
 

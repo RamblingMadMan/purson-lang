@@ -35,26 +35,24 @@ namespace purson{
 		
 		while(it != it_end){
 			auto tok_start = it;
-			auto tok_end = tok_start;
 			
 			auto[cp, line, col] = next_cp();
+			
+			if(u_isspace(cp))
+				continue;
+			else if(cp == (std::uint32_t)EOF)
+				break;
 			
 			auto tok_line = line;
 			auto tok_col = col;
 			
 			std::size_t tok_size = 0;
 			
-			token_type tok_type = token_type::end;
+			token_type tok_type;
 			
-			if(u_isspace(cp))
-				continue;
-			else if(cp == (std::uint32_t)EOF)
-				break;
-			else if(u_isalpha(cp)){ // identifiers, keywords
+			if(u_isalpha(cp)){ // identifiers, keywords
 				while(1){
 					if(it == it_end) break;
-					
-					utf8::next(tok_end, it_end);
 					
 					auto cp_peek = utf8::peek_next(it, it_end);
 					if(!u_isalnum(cp_peek))
@@ -67,7 +65,7 @@ namespace purson{
 				}
 				
 				tok_type = token_type::id;
-				tok_size = std::distance(tok_start, tok_end);
+				tok_size = std::distance(tok_start, it);
 			}
 			else if(u_isdigit(cp)){ // integers, reals
 				bool zero_base = false;
@@ -75,8 +73,6 @@ namespace purson{
 				if(cp == '0') zero_base = true;
 				
 				if(it != it_end){
-					tok_type = token_type::integer;
-					
 					while(1){
 						if(it == it_end) break;
 						
@@ -106,6 +102,7 @@ namespace purson{
 					}
 				}
 				
+				tok_type = token_type::integer;
 				tok_size = std::distance(tok_start, it);
 				
 				if(tok_size == 2){
@@ -118,28 +115,28 @@ namespace purson{
 					
 			}
 			else if(op_type_from_str(std::string_view(tok_start, std::distance(tok_start, it)))){
-				if(cp != ';'){
-					while(1){
-						if(it == it_end) break;
-						
-						utf8::next(tok_end, it_end);
-						
-						auto cp_peek = utf8::peek_next(it, it_end);
-						auto op_str_end = tok_end;
-						utf8::next(op_str_end, it_end);
-						
-						if(!u_ispunct(cp) || !op_type_from_str(std::string_view(tok_start, std::distance(tok_start, op_str_end))))
-							break;
-						
-						auto cp_data = next_cp();
-						cp = cp_data.cp;
-						line = cp_data.cp;
-						col = cp_data.col;
-					}
+				while(1){
+					if(it == it_end) break;
 					
-					tok_type = token_type::op;
-					tok_size = std::distance(tok_start, it);
+					auto cp_peek = utf8::peek_next(it, it_end);
+					auto op_str_end = it;
+					utf8::next(op_str_end, it_end);
+					
+					if(!u_ispunct(cp) || !op_type_from_str(std::string_view(tok_start, std::distance(tok_start, op_str_end))))
+						break;
+					
+					auto cp_data = next_cp();
+					cp = cp_data.cp;
+					line = cp_data.cp;
+					col = cp_data.col;
 				}
+				
+				tok_type = token_type::op;
+				tok_size = std::distance(tok_start, it);
+			}
+			else if(cp == ';'){
+				tok_type = token_type::end;
+				tok_size = 1;
 			}
 			else
 				throw lexer_error{
