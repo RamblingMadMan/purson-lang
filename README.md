@@ -2,8 +2,7 @@
 Logo](https://image.ibb.co/ng9iGo/purson_Lion_Red_Very_Small.png)
 
 # Purson
-Functionally oriented general purpose programming language created out of 
-interest and curiosity rather than a need.
+Functionally oriented general purpose programming language.
 
 ## Brief
 Purson was created out of interest and curiosity rather than a need and as such 
