@@ -4,9 +4,7 @@
 #include <stdexcept>
 
 namespace purson{
-	class exception: public std::runtime_error{
-		using std::runtime_error::runtime_error;
-	};
+	class exception: public std::runtime_error{ using std::runtime_error::runtime_error; };
 }
 
 #endif // !PURSON_EXCEPTION_HPP

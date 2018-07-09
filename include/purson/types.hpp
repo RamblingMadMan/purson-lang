@@ -17,17 +17,19 @@ namespace purson{
 			virtual ~type() = default;
 	};
 	
+	class arithmetic_type: public type{};
+	
 	//! base for void types (probably the only)
 	class void_type: public type{};
 
 	//! base for boolean types
-	class boolean_type: public type{};
+	class boolean_type: public arithmetic_type{};
 
 	//! base for numeric types
-	class numeric_type: public type{};
+	class numeric_type: public arithmetic_type{};
 
 	//! base for character types
-	class character_type: public type{};
+	class character_type: public arithmetic_type{};
 
 	//! base for string types
 	class string_type: public type{};

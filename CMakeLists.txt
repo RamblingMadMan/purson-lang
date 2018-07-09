@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10.0 FATAL_ERROR)
 
 project(purson)
 
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_CXX_STANDARD 17)
 
 include_directories("${PROJECT_SOURCE_DIR}/include")

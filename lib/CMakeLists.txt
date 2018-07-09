@@ -1,3 +1,5 @@
+find_package(ICU REQUIRED)
+
 set(
 	PURSON_SOURCES
 	lexer.cpp
@@ -5,4 +7,4 @@ set(
 
 add_library(purson ${PURSON_SOURCES})
 
-target_link_libraries(purson fmt)
+target_link_libraries(purson fmt ICU::ICU)
