@@ -1,6 +1,8 @@
 ![Purson Temporary 
 Logo](https://image.ibb.co/ng9iGo/purson_Lion_Red_Very_Small.png)
 
+[![Build Status](https://travis-ci.com/RamblingMadMan/purson-lang.svg?branch=master)](https://travis-ci.com/RamblingMadMan/purson-lang)
+
 # Purson
 Functionally oriented general purpose programming language.
 
