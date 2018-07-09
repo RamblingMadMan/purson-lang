@@ -13,9 +13,21 @@ rolling release fashion, releases are snapshots of development.
 
 The language is designed to be quick to write, beautiful to look at and easy to do right.
 
+As an example here are a couple of function definitions:
+
+```
+fn pow(x, n) => x * pow(x, n-1);
+fn pow(x, 1) => x;
+fn pow(x, 0) => 1;
+
+fn fib(a) => fib(a-1) + fib(a-2);
+fn fib(1) => 1;
+fn fib(0) => 0;
+```
+
 ### Language Features
 
-- [x] Type inference
+- [ ] Type inference
 - [ ] Pattern matching
 - [ ] Automatic differentiation
 - [ ] Dynamic code generation (self-modification)
