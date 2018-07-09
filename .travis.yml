@@ -17,11 +17,11 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-3.9
+            - llvm-toolchain-trust-4.0
           packages:
             - g++-7
-            - clang-3.9
-      env: COMPILER=clang++-3.9
+            - clang-4.0
+      env: COMPILER=clang++-4.0
 
 before_install:
   - sudo apt-get update -qq
