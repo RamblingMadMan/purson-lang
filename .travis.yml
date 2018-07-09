@@ -19,7 +19,6 @@ matrix:
             - ubuntu-toolchain-r-test
             - llvm-toolchain-trusty-4.0
           packages:
-            - g++-7
             - clang-4.0
       env: COMPILER=clang++-4.0
 
