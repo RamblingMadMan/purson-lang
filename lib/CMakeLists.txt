@@ -7,7 +7,9 @@ set(
 	operator.cpp
 	lexer.cpp
 	types.cpp
+	parser.hpp
 	parser.cpp
+	parser/function.cpp
 )
 
 add_library(purson ${PURSON_SOURCES})

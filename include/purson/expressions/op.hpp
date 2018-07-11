@@ -13,34 +13,35 @@ namespace purson{
 	
 	class unary_op_expr: public op_expr{
 		public:
-			unary_op_expr(operator_type op_ty, const rvalue_expr *operand_)
+			unary_op_expr(operator_type op_ty, std::shared_ptr<const rvalue_expr> operand_)
 				: m_operator(unary_op, op_ty, operand_->value_type()), m_operand(operand_){}
 			
 			const type *value_type() const noexcept override{ return m_operator.result_type(); }
 			
-			const rvalue_expr *operand() const noexcept{ return m_operand; }
+			const rvalue_expr *operand() const noexcept{ return m_operand.get(); }
 			
 			op operator_() const noexcept override{ return m_operator; }
 			
 		private:
 			op m_operator;
-			const rvalue_expr *m_operand;
+			std::shared_ptr<const rvalue_expr> m_operand;
 	};
+	
 	class binary_op_expr: public op_expr{
 		public:
-			binary_op_expr(operator_type op_ty, const rvalue_expr *lhs_, const rvalue_expr *rhs_)
+			binary_op_expr(operator_type op_ty, std::shared_ptr<const rvalue_expr> lhs_, std::shared_ptr<const rvalue_expr> rhs_)
 				: m_operator(binary_op, op_ty, lhs_->value_type(), rhs_->value_type()), m_lhs(lhs_), m_rhs(rhs_){}
 			
 			const type *value_type() const noexcept override{ return m_operator.result_type(); }
 			
-			const rvalue_expr *lhs() const noexcept{ return m_lhs; }
-			const rvalue_expr *rhs() const noexcept{ return m_rhs; }
+			const rvalue_expr *lhs() const noexcept{ return m_lhs.get(); }
+			const rvalue_expr *rhs() const noexcept{ return m_rhs.get(); }
 			
 			op operator_() const noexcept override{ return m_operator; }
 			
 		private:
 			op m_operator;
-			const rvalue_expr *m_lhs, *m_rhs;
+			std::shared_ptr<const rvalue_expr> m_lhs, m_rhs;
 	};
 }
 

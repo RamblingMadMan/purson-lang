@@ -8,16 +8,7 @@
 #include "token.hpp"
 
 namespace purson{
-	class lexer_error: public exception{
-		public:
-			lexer_error(const class location &loc, const std::string &msg)
-				: exception(msg), m_loc(loc){}
-				
-			const class location &location() const noexcept{ return m_loc; }
-				
-		private:
-			class location m_loc;
-	};
+	class lexer_error: public source_error{ using source_error::source_error; };
 	
 	/**
 	 * Lex source into tokens

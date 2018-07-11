@@ -18,11 +18,19 @@
 #define PURSON_DEFAULT_LOCALE "en_US.UTF-8"
 #endif
 
+void print_error_squigglies(const purson::location &loc){
+	// + 1 because of prompt character
+	for(std::size_t i = 0; i < loc.col() + 1; i++)
+		fmt::print(" ");
+	
+	for(std::size_t i = 0; i < loc.len(); i++)
+		fmt::print("~");
+}
+
 int main(int argc, char *argv[]){
 	std::setlocale(LC_ALL, PURSON_DEFAULT_LOCALE);
 	
 	std::string_view ver = "dev";
-	auto types = purson::types(ver);
 	
 	fmt::print("Purson REPL.\n");
 	
@@ -55,15 +63,16 @@ int main(int argc, char *argv[]){
 			auto tokens = purson::lex(ver, "REPL", input_str);
 			auto exprs = purson::parse(ver, tokens);
 			
-			fmt::print("{} expressions\n", exprs.size());
-			for(auto &&expr : exprs){
-				if(auto val_expr = std::dynamic_pointer_cast<purson::integer_literal_expr>(expr)){
-					fmt::print("\tInteger literal -> {}\n", val_expr->value_type()->str());
-				}
-			}
+			fmt::print("{} {}\n", exprs.size(), exprs.size() > 1 ? "expressions" : "expression");
 		}
 		catch(const purson::lexer_error &err){
-			fmt::print("[ERROR] {}\n", err.what());
+			print_error_squigglies(err.location());
+			fmt::print("\n[LEXER ERROR] {}\n", err.what());
+			continue;
+		}
+		catch(const purson::parser_error &err){
+			print_error_squigglies(err.location());
+			fmt::print("\n[PARSER ERROR] {}\n", err.what());
 			continue;
 		}
 		catch(const std::exception &err){

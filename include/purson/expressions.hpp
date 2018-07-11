@@ -3,5 +3,6 @@
 
 #include "expressions/literal.hpp"
 #include "expressions/op.hpp"
+#include "expressions/function.hpp"
 
 #endif // !PURSON_EXPRESSIONS_HPP

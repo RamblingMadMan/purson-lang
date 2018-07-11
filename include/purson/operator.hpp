@@ -17,7 +17,10 @@ namespace purson{
 	
 	enum class operator_type{
 		add, sub, mul, div, mod,
-		inc, dec
+		equ, neq, lt, gt, lte, gte,
+		inc, dec,
+		set,
+		ret, type
 	};
 	
 	inline std::optional<operator_type> op_type_from_str(std::string_view str){
@@ -29,16 +32,31 @@ namespace purson{
 				case '*': return operator_type::mul;
 				case '/': return operator_type::div;
 				case '%': return operator_type::div;
+				case ':': return operator_type::type;
+				case '=': return operator_type::set;
+				case '>': return operator_type::gt;
+				case '<': return operator_type::lt;
 				default: return std::nullopt;
 			}
 		}
-		else{
+		else if(str.size() == 2){
 			switch(str[0]){
 				case '+': return str[1] == '+' ? std::make_optional(operator_type::inc) : std::nullopt;
 				case '-': return str[1] == '-' ? std::make_optional(operator_type::dec) : std::nullopt;
+				
+				case '=':{
+					switch(str[1]){
+						case '>': return operator_type::ret;
+						case '=': return operator_type::equ;
+						default: return std::nullopt;
+					}
+				}
+				
 				default: return std::nullopt;
 			}
 		}
+		else
+			return std::nullopt;
 	}
 	
 	class op{

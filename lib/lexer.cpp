@@ -12,6 +12,29 @@ namespace purson{
 		std::size_t line, col;
 	};
 	
+	bool is_keyword(std::string_view kw){
+		return
+			(kw == "var") ||
+			(kw == "fn") ||
+			(kw == "if") ||
+			(kw == "else") ||
+			(kw == "type");
+	}
+	
+	bool is_bracket(std::uint32_t cp){
+		switch(cp){
+			case '(':
+			case ')':
+			case '{':
+			case '}':
+			case '[':
+			case ']':
+				return true;
+				
+			default: return false;
+		}
+	}
+	
 	std::vector<token> lex(std::string_view ver, std::string_view name, std::string_view src){
 		std::vector<token> ret;
 		
@@ -50,12 +73,12 @@ namespace purson{
 			
 			token_type tok_type;
 			
-			if(u_isalpha(cp)){ // identifiers, keywords
+			if(u_isalpha(cp) || (cp == '_')){ // identifiers, keywords
 				while(1){
 					if(it == it_end) break;
 					
 					auto cp_peek = utf8::peek_next(it, it_end);
-					if(!u_isalnum(cp_peek))
+					if(!u_isalnum(cp_peek) && (cp_peek != '_'))
 						break;
 					
 					auto cp_data = next_cp();
@@ -64,8 +87,12 @@ namespace purson{
 					col = cp_data.col;
 				}
 				
-				tok_type = token_type::id;
 				tok_size = std::distance(tok_start, it);
+				
+				if(is_keyword(std::string_view(tok_start, tok_size)))
+					tok_type = token_type::keyword;
+				else
+					tok_type = token_type::id;
 			}
 			else if(u_isdigit(cp)){ // integers, reals
 				bool zero_base = false;
@@ -114,15 +141,19 @@ namespace purson{
 				}
 					
 			}
+			else if(is_bracket(cp)){
+				tok_type = token_type::bracket;
+				tok_size = 1;
+			}
 			else if(op_type_from_str(std::string_view(tok_start, std::distance(tok_start, it)))){
 				while(1){
 					if(it == it_end) break;
 					
-					auto cp_peek = utf8::peek_next(it, it_end);
+					//auto cp_peek = utf8::peek_next(it, it_end);
 					auto op_str_end = it;
 					utf8::next(op_str_end, it_end);
 					
-					if(!u_ispunct(cp) || !op_type_from_str(std::string_view(tok_start, std::distance(tok_start, op_str_end))))
+					if(!op_type_from_str(std::string_view(tok_start, std::distance(tok_start, op_str_end))))
 						break;
 					
 					auto cp_data = next_cp();

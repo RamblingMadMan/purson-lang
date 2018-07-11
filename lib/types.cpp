@@ -1,5 +1,6 @@
 #include <cmath>
 #include <map>
+#include <list>
 
 #include "fmt/format.h"
 
@@ -15,6 +16,10 @@ namespace purson{
 			
 		std::size_t m_bits;
 		std::string m_str;
+		
+		protected:
+			void set_str(std::string_view str_){ m_str = str_; }
+			void set_str(std::string &&str_){ m_str = std::move(str_); }
 	};
 	
 	struct basic_integer: basic_type, integer_type{
@@ -35,9 +40,32 @@ namespace purson{
 		bool m_is_ieee754;
 	};
 	
+	struct basic_function: basic_type, function_type{
+		basic_function(std::size_t bits_, const type *return_type_, const std::vector<const type*> &param_types_)
+			: basic_type(bits_, ""), m_return_type{return_type_}, m_param_types{param_types_}{
+			std::string tmp_str = fmt::format("f{}", param_types_.size());
+			
+			for(std::size_t i = 0; i < param_types_.size(); i++){
+				if(!param_types_[i]) throw type_error{fmt::format("null type for parameter {}", i + 1)};
+				tmp_str = fmt::format("{}{}", tmp_str, param_types_[i]->str());
+			}
+			
+			if(!return_type_) throw type_error{"null return type given for function type"};
+			tmp_str = fmt::format("{}{}", tmp_str, return_type_->str());
+			set_str(std::move(tmp_str));
+		}
+		
+		const type *return_type() const noexcept override{ return m_return_type; }
+		const std::size_t num_params() const noexcept override{ return m_param_types.size(); }
+		const type *param_type(std::size_t idx) const noexcept override{ return idx < m_param_types.size() ? m_param_types[idx] : nullptr; }
+			
+		const type *m_return_type;
+		std::vector<const type*> m_param_types;
+	};
+	
 	class base_typeset: public typeset{
 		public:
-			const type *get(std::string_view name) const noexcept override{
+			const type *get(std::string_view name) const override{
 				switch(name[0]){
 					case 'u':
 					case 'i':{
@@ -71,7 +99,7 @@ namespace purson{
 				return nullptr;
 			}
 			
-			const integer_type *integer(std::uint32_t bits, bool is_signed) const noexcept override{
+			const integer_type *integer(std::uint32_t bits, bool is_signed) const override{
 				switch(bits){
 					case 8:
 					case 16:
@@ -85,7 +113,9 @@ namespace purson{
 				}
 			}
 			
-			const real_type *real(std::uint32_t bits, bool ieee754) const noexcept override{
+			const real_type *real(std::uint32_t bits, bool ieee754) const override{
+				if(!ieee754) return nullptr;
+				
 				switch(bits){
 					case 8:
 					case 16:
@@ -97,6 +127,40 @@ namespace purson{
 				}
 			}
 			
+			const function_type *function(const type *return_type, const std::vector<const type*> &param_types) const override{
+				auto ret_ty_res = m_fn_types.find(return_type);
+				if(ret_ty_res == end(m_fn_types)){
+					auto res = m_fn_types.emplace(return_type, std::map<std::size_t, std::list<basic_function>>{});
+					if(!res.second)
+						throw type_error{"could not create function type map for return type"};
+				
+					ret_ty_res = res.first;
+				}
+				
+				auto num_params_res = ret_ty_res->second.find(param_types.size());
+				if(num_params_res == end(ret_ty_res->second)){
+					auto res = ret_ty_res->second.emplace(param_types.size(), std::list<basic_function>{});
+					if(!res.second)
+						throw type_error{"could not create function type map for number of parameters"};
+					
+					num_params_res = res.first;
+				}
+				
+				for(auto &&fn_ty : num_params_res->second){
+					bool good = true;
+					for(std::size_t i = 0; i < fn_ty.num_params(); i++){
+						if(fn_ty.param_type(i) != param_types[i]){
+							good = false;
+							break;
+						}
+					}
+					
+					if(good) return &fn_ty;
+				}
+				
+				return &num_params_res->second.emplace_back(64, return_type, param_types);
+			}
+			
 		private:
 			basic_integer m_int_types[8]{
 				{8, true}, {16, true}, {32, true}, {64, true},
@@ -106,6 +170,8 @@ namespace purson{
 			basic_real m_real_types[2]{
 				{32, true}, {64, true}
 			};
+			
+			mutable std::map<const type*, std::map<std::size_t, std::list<basic_function>>> m_fn_types;
 	};
 	
 	static base_typeset purson_base_types;

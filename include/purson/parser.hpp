@@ -9,16 +9,7 @@
 #include "expressions/base.hpp"
 
 namespace purson{
-	class parser_error: public exception{
-		public:
-			parser_error(const class location &loc, const std::string &msg)
-				: exception(msg), m_loc(loc){}
-				
-			const class location &location() const noexcept{ return m_loc; }
-				
-		private:
-			class location m_loc;
-	};
+	class parser_error: public source_error{ using source_error::source_error; };
 	
 	/**
 	 * Parse tokens into AST

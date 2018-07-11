@@ -2,6 +2,7 @@
 #define PURSON_TYPES_HPP 1
 
 #include <memory>
+#include <vector>
 
 /**
  * @headerfile types.hpp
@@ -11,9 +12,12 @@
  * Purson is statically typed, but types are usually inferred.
  **/
 
+#include "exception.hpp"
 #include "types/numeric.hpp"
 
 namespace purson{
+	class type_error: public exception{ using exception::exception; };
+	
 	/**
 	 * Set of types within the language
 	 **/
@@ -44,6 +48,11 @@ namespace purson{
 			 * @returns nullptr if type not found, otherwise the real type
 			 **/
 			virtual const real_type *real(std::uint32_t bits, bool ieee754 = true) const = 0;
+			
+			/**
+			 * Get function type
+			 **/
+			virtual const function_type *function(const type *return_type, const std::vector<const type*> &param_types) const = 0;
 	};
 	
 	/**

@@ -14,6 +14,13 @@ namespace purson{
 	
 	struct arithmetic_type: virtual type{};
 	
+	//! base for function types
+	struct function_type: virtual type{
+		virtual const type *return_type() const noexcept = 0;
+		virtual const std::size_t num_params() const noexcept = 0;
+		virtual const type *param_type(std::size_t idx) const noexcept = 0;
+	};
+	
 	//! base for void types (probably the only)
 	struct void_type: virtual type{};
 
