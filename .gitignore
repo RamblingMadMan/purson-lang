@@ -5,7 +5,3 @@ doc
 
 .directory
 purson-lang.kdev4
-
-# submodule directories
-fmt
-utfcpp
