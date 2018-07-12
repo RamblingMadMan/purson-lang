@@ -55,3 +55,22 @@ A few dependencies are required to build/run the Purson components.
 * MPFR
 * ICU
 * Readline
+
+## Building
+
+Purson was mainly developed on a linux box so instructions follow as such, but all commands have windows alternatives.
+
+A simple build will go something like this:
+
+```bash
+git submodule update --init --
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j4
+```
+
+Then to run the REPL:
+```bash
+./repl/purson-repl
+```
