@@ -106,24 +106,27 @@ namespace purson{
 			++it;
 			if(it == end)
 				throw parser_error{fn.loc(), "unexpected end of tokens after function declaration"};
-			else if(delim_fn(*it)){
-				std::vector<std::string_view> param_names;
-				std::vector<const type*> param_types;
-				
-				param_names.reserve(params.size());
-				param_types.reserve(params.size());
-				
-				for(auto &&param : params){
-					param_names.push_back(param.first->str());
-					param_types.push_back(param.second);
-				}
-				
-				return std::make_shared<fn_declaration_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_names);
-			}
 		}
 		
-		if(it->str() == "=>"){
-			// return statement
+		if(delim_fn(*it)){
+			// simple declaration
+			
+			std::vector<std::string_view> param_names;
+			std::vector<const type*> param_types;
+			
+			param_names.reserve(params.size());
+			param_types.reserve(params.size());
+			
+			for(auto &&param : params){
+				param_names.push_back(param.first->str());
+				param_types.push_back(param.second);
+			}
+			
+			return std::make_shared<fn_declaration_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_names);
+		}
+		else if(it->str() == "=>"){
+			// expression as return statement
+			
 			++it;
 			auto val_it = it;
 			auto ret_val = parse_value(delim_fn, it, end, scope);
@@ -147,7 +150,11 @@ namespace purson{
 			auto ret = std::make_shared<return_expr>(std::move(ret_val));
 			return std::make_shared<fn_definition_expr>(std::move(decl), std::move(ret));
 		}
-		if(it->str() == "="){
+		else if(it->str() == "{"){
+			// complex/imperative function body
+			throw parser_error{it->loc(), "imperative function style is not implemented yet"};
+		}
+		else if(it->str() == "="){
 			// function alias
 			
 			if(!fn_name)
@@ -155,7 +162,7 @@ namespace purson{
 			
 			throw parser_error{it->loc(), "function aliases not implemented"};
 		}
-		
-		throw parser_error{fn.loc(), "functions not fully implemented, only simple functions currently supported"};
+		else
+			throw parser_error{fn.loc(), "unexpected expression after function declaration"};
 	}
 }

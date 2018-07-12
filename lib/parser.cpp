@@ -20,6 +20,11 @@ namespace purson{
 				return parse_unary_op(op, delim_fn, ++it, end, scope);
 			}
 			
+			case token_type::keyword:{
+				auto &&kw = *it;
+				return parse_keyword(kw, default_delim, ++it, end, scope);
+			}
+			
 			default:
 				throw parser_error{it->loc(), "unexpected token"};
 		}
@@ -41,7 +46,7 @@ namespace purson{
 			}
 			
 			default:
-				throw parser_error{it->loc(), "unexpected token"};
+				throw parser_error{it->loc(), "unexpected token for value expression"};
 		}
 	}
 	
@@ -53,7 +58,7 @@ namespace purson{
 			}
 			
 			default:
-				throw parser_error{it->loc(), "unexpected token"};
+				throw parser_error{it->loc(), "unexpected token at top level"};
 		}
 	}
 	

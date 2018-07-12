@@ -10,10 +10,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(DEPENDENCY_DIR ${PROJECT_SOURCE_DIR}/deps)
 
-include_directories(${DEPENDENCY_DIR}/fmt-5.0.0/include)
-include_directories(${DEPENDENCY_DIR}/utfcpp-2.3.5/source)
+include_directories(${DEPENDENCY_DIR}/fmt/include)
+include_directories(${DEPENDENCY_DIR}/utfcpp/source)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-add_subdirectory(${DEPENDENCY_DIR}/fmt-5.0.0)
+add_subdirectory(${DEPENDENCY_DIR}/fmt)
 add_subdirectory(lib)
 add_subdirectory(repl)

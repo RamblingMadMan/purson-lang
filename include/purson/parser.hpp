@@ -19,10 +19,9 @@ namespace purson{
 	 * @returns AST of parsed source code
 	 **/
 	
-	std::vector<std::shared_ptr<expr>> parse(
-		std::string_view ver,
-		const std::vector<token> &tokens
-	);
+	std::vector<std::shared_ptr<expr>> parse(std::string_view ver, const std::vector<token> &tokens);
+	
+	std::vector<std::shared_ptr<expr>> parse_repl(std::string_view ver, const std::vector<token> &tokens);
 }
 
 #endif // !PURSON_PARSER_HPP

@@ -23,6 +23,10 @@ fn pow(x, 0) => 1;
 fn fib(a) => fib(a-1) + fib(a-2);
 fn fib(1) => 1;
 fn fib(0) => 0;
+
+fn repl(){
+	fn f(x) => 1;
+}
 ```
 
 ### Language Features

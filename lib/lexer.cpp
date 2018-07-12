@@ -172,7 +172,7 @@ namespace purson{
 			else
 				throw lexer_error{
 					location{name, line, col, 1},
-					fmt::format("invalid character({}) encountered", cp)
+					fmt::format("what the fuck is this? ({})", cp)
 				};
 			
 			ret.emplace_back(
