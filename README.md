@@ -27,7 +27,7 @@ fn fib(0) => 0;
 
 ### Language Features
 
-- [ ] Type inference
+- [X] Type inference
 - [ ] Pattern matching
 - [ ] Automatic differentiation
 - [ ] Dynamic code generation (self-modification)
