@@ -5,3 +5,8 @@ doc
 
 .directory
 purson-lang.kdev4
+
+# submodule folders
+deps
+fmt
+utfcpp

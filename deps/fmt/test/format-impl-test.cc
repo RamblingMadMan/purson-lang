@@ -5,6 +5,7 @@
 //
 // For the license information refer to format.h.
 
+#define FMT_EXTENDED_COLORS
 #define FMT_NOEXCEPT
 #undef FMT_SHARED
 #include "test-assert.h"
@@ -16,7 +17,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "gmock/gmock.h"
+#include "gmock.h"
 #include "gtest-extra.h"
 #include "util.h"
 
@@ -30,9 +31,8 @@ struct ValueExtractor: fmt::internal::function<T> {
   }
 
   template <typename U>
-  T operator()(U) {
+  FMT_NORETURN T operator()(U) {
     throw std::runtime_error(fmt::format("invalid type {}", typeid(U).name()));
-    return T();
   }
 };
 
@@ -53,9 +53,9 @@ TEST(FormatTest, FormatNegativeNaN) {
 }
 
 TEST(FormatTest, StrError) {
-  char *message = 0;
+  char *message = nullptr;
   char buffer[BUFFER_SIZE];
-  EXPECT_ASSERT(fmt::safe_strerror(EDOM, message = 0, 0), "invalid buffer");
+  EXPECT_ASSERT(fmt::safe_strerror(EDOM, message = nullptr, 0), "invalid buffer");
   EXPECT_ASSERT(fmt::safe_strerror(EDOM, message = buffer, 0),
                 "invalid buffer");
   buffer[0] = 'x';
@@ -116,4 +116,11 @@ TEST(FormatTest, FormatErrorCode) {
     fmt::format_error_code(buffer, codes[i], prefix);
     EXPECT_EQ(msg, to_string(buffer));
   }
+}
+
+TEST(ColorsTest, Colors) {
+  EXPECT_WRITE(stdout, fmt::print(fmt::rgb(255,20,30), "rgb(255,20,30)"),
+               "\x1b[38;2;255;020;030mrgb(255,20,30)\x1b[0m");
+  EXPECT_WRITE(stdout, fmt::print(fmt::color::blue,"blue"),
+               "\x1b[38;2;000;000;255mblue\x1b[0m");
 }

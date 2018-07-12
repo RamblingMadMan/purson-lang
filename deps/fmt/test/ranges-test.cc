@@ -11,7 +11,11 @@
 
 #include "fmt/ranges.h"
 
-#include "gtest/gtest.h"
+/// Check if  'if constexpr' is supported.
+#if (__cplusplus > 201402L) || \
+    (defined(_MSVC_LANG) && _MSVC_LANG > 201402L && _MSC_VER >= 1910)
+
+#include "gtest.h"
 
 #include <vector>
 #include <array>
@@ -30,10 +34,9 @@ TEST(RangesTest, FormatVector2) {
   EXPECT_EQ("{{1, 2}, {3, 5}, {7, 11}}", ivf);
 }
 
-#if FMT_USE_INTEGER_SEQUENCE
 TEST(RangesTest, FormatMap) {
   std::map<std::string, int32_t> simap{{"one", 1}, {"two", 2}};
-  EXPECT_EQ("{(one, 1), (two, 2)}", fmt::format("{}", simap));
+  EXPECT_EQ("{(\"one\", 1), (\"two\", 2)}", fmt::format("{}", simap));
 }
 
 TEST(RangesTest, FormatPair) {
@@ -42,14 +45,10 @@ TEST(RangesTest, FormatPair) {
 }
 
 TEST(RangesTest, FormatTuple) {
-  std::tuple<int64_t, float, std::string> tu1{42, 3.14159265358979f,
-                                              "this is tuple"};
-  EXPECT_EQ("(42, 3.14159, this is tuple)", fmt::format("{}", tu1));
+  std::tuple<int64_t, float, std::string, char> tu1{42, 3.14159265358979f,
+                                              "this is tuple", 'i'};
+  EXPECT_EQ("(42, 3.14159, \"this is tuple\", 'i')", fmt::format("{}", tu1));
 }
-
-/// Check if  'if constexpr' is supported.
-#if (__cplusplus > 201402L) || \
-    (defined(_MSVC_LANG) && _MSVC_LANG > 201402L && _MSC_VER >= 1910)
 
 struct my_struct {
   int32_t i;
@@ -82,9 +81,8 @@ struct tuple_element<N, my_struct> {
 
 TEST(RangesTest, FormatStruct) {
   my_struct mst{13, "my struct"};
-  EXPECT_EQ("(13, my struct)", fmt::format("{}", mst));
+  EXPECT_EQ("(13, \"my struct\")", fmt::format("{}", mst));
 }
 
 #endif  // (__cplusplus > 201402L) || (defined(_MSVC_LANG) && _MSVC_LANG >
         // 201402L && _MSC_VER >= 1910)
-#endif  // FMT_USE_INTEGER_SEQUENCE
