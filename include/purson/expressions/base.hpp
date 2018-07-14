@@ -5,7 +5,7 @@
 #include "../types/base.hpp"
 
 namespace purson{
-	class expression_error: public exception{ using exception::exception; };
+	class expr_error: public exception{ using exception::exception; };
 	
 	//! base for all expressions
 	class expr{
@@ -24,7 +24,11 @@ namespace purson{
 	class rvalue_expr: public value_expr{};
 	
 	//! an lvalue expression e.g. a reference
-	class lvalue_expr: public rvalue_expr{};
+	class lvalue_expr: public rvalue_expr{
+		public:
+			virtual std::string_view name() const noexcept = 0;
+			virtual bool is_mutable() const noexcept = 0;
+	};
 }
 
 #endif // !PURSON_EXPRESSIONS_BASE_HPP

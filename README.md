@@ -23,23 +23,27 @@ fn pow(x, 0) => 1;
 fn fib(a) => fib(a-1) + fib(a-2);
 fn fib(1) => 1;
 fn fib(0) => 0;
-
-fn repl(){
-	fn f(x) => 1;
-}
 ```
 
 ### Language Features
 
-- [X] Type inference
-- [ ] Pattern matching
-- [ ] Automatic differentiation
-- [ ] Dynamic code generation (self-modification)
+- Type inference
+- Pattern matching
+- Automatic differentiation
+- Dynamic code generation (self-modification)
 
 ## Components
 
 ### Purson Library
 This library contains functions for lexing, parsing and compiling Purson code as well as utilities to interface with programs written in purson.
+
+Here is a list of completed library features:
+
+- [X] Lexer
+- [?] Parser
+- [ ] Compiler
+- [?] Type system
+- [ ] Module system
 
 ### Purson REPL
 A REPL environment for testing and prototyping. GNU Readline is used for 
@@ -55,6 +59,7 @@ A few dependencies are required to build/run the Purson components.
 * MPFR
 * ICU
 * Readline
+* LLVM
 
 ## Building
 

@@ -42,17 +42,17 @@ namespace purson{
 				m_vars[name] = var;
 			}
 			
-			std::shared_ptr<fn_expr> get_fn(std::string_view mangled_name) const noexcept{
-				if(auto res = m_fns.find(mangled_name); res != end(m_fns))
+			std::vector<std::shared_ptr<fn_expr>> get_fn(std::string_view name) const noexcept{
+				if(auto res = m_fns.find(name); res != end(m_fns))
 					return res->second;
 				else if(m_parent)
-					return m_parent->get_fn(mangled_name);
+					return m_parent->get_fn(name);
 				else
-					return nullptr;
+					return {};
 			}
 			
-			void set_fn(std::string_view mangled_name, std::shared_ptr<fn_expr> fn){
-				m_fns[mangled_name] = fn;
+			void add_fn(std::string_view mangled_name, std::shared_ptr<fn_expr> fn){
+				m_fns[mangled_name].push_back(fn);
 			}
 			
 			const class typeset *typeset() const noexcept{ return m_types; }
@@ -62,7 +62,7 @@ namespace purson{
 			const class typeset *m_types;
 			
 			std::map<std::string_view, const type*> m_type_map;
-			std::map<std::string_view, std::shared_ptr<fn_expr>> m_fns;
+			std::map<std::string_view, std::vector<std::shared_ptr<fn_expr>>> m_fns;
 			std::map<std::string_view, std::shared_ptr<lvalue_expr>> m_vars;
 	};
 	
@@ -75,6 +75,7 @@ namespace purson{
 	std::shared_ptr<expr> parse_top(token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	std::shared_ptr<expr> parse_inner(delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	std::shared_ptr<rvalue_expr> parse_value(delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
+	std::shared_ptr<rvalue_expr> parse_leading_value(std::shared_ptr<rvalue_expr> val, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	
 	std::shared_ptr<rvalue_expr> parse_literal(const token &lit, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	std::shared_ptr<rvalue_expr> parse_unary_op(const token &op, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
@@ -85,6 +86,7 @@ namespace purson{
 	std::shared_ptr<rvalue_expr> parse_id(const token &id, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	std::shared_ptr<rvalue_expr> parse_fn(const token &fn, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	std::shared_ptr<lvalue_expr> parse_var(const token &var, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
+	std::shared_ptr<rvalue_expr> parse_match(const token &match, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 }
 
 #endif // !PURSON_LIB_PARSER_HPP

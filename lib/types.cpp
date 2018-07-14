@@ -7,6 +7,57 @@
 #include "purson/types.hpp"
 
 namespace purson{
+	const type *promote_type(const type *a, const type *b){
+		using real_typep_t = const real_type*;
+		using rational_typep_t = const rational_type*;
+		using integer_typep_t = const integer_type*;
+		using natural_typep_t = const natural_type*;
+		
+		auto greater_of = [](auto lhs, auto rhs){
+			return lhs->bits() > rhs->bits() ? lhs : rhs;
+		};
+		
+		if(!a && !b) return nullptr;
+		else if(!a) return b;
+		else if(!b) return a;
+		else if(a == b) return a;
+		else if(dynamic_cast<const arithmetic_type*>(a) && dynamic_cast<const arithmetic_type*>(b)){
+			real_typep_t ar = dynamic_cast<real_typep_t>(a), br = dynamic_cast<real_typep_t>(b);
+			rational_typep_t aq = dynamic_cast<rational_typep_t>(a), bq = dynamic_cast<rational_typep_t>(b);
+			integer_typep_t ai = dynamic_cast<integer_typep_t>(a), bi = dynamic_cast<integer_typep_t>(b);
+			natural_typep_t an = dynamic_cast<natural_typep_t>(a), bn = dynamic_cast<natural_typep_t>(b);
+			
+			if(an || bn){
+				if(an && bn)
+					return greater_of(an, bn);
+				else
+					return an ? b : an;
+			}
+			else if(ai || bi){
+				if(ai && bi)
+					return greater_of(ai, bi);
+				else
+					return ai ? b : ai;
+			}
+			else if(aq || bq){
+				if(aq && bq)
+					return greater_of(aq, bq);
+				else
+					return aq ? b : aq;
+			}
+			else if(ar || br){
+				if(ar && br)
+					return greater_of(ar, br);
+				else
+					return ar ? b : ar;
+			}
+			else
+				throw type_error{"unknown arithmetic_type, can't promote either side :^("};
+		}
+		else
+			throw type_error{"only arithmetic types can be promoted currently"};
+	}
+	
 	struct basic_type: virtual type{
 		basic_type(std::size_t bits_, std::string_view id)
 			: m_bits(bits_), m_str(fmt::format("{}{}", id, bits_)){}
@@ -22,22 +73,26 @@ namespace purson{
 			void set_str(std::string &&str_){ m_str = std::move(str_); }
 	};
 	
+	struct basic_natural: basic_type, natural_type{
+		basic_natural(std::size_t bits_)
+			: basic_type(bits_, "n"){}
+	};
+	
 	struct basic_integer: basic_type, integer_type{
-		basic_integer(std::size_t bits_, bool signed_)
-			: basic_type(bits_, signed_ ? "i" : "u"), m_is_signed(signed_){}
-		
-		bool is_signed() const noexcept override{ return m_is_signed; }
-		
-		bool m_is_signed;
+		basic_integer(std::size_t bits_)
+			: basic_type(bits_, "i"){}
+	};
+	
+	struct basic_rational: basic_type, rational_type{
+		basic_rational(std::size_t bits_)
+			: basic_type(bits_, "q"){}
 	};
 	
 	struct basic_real: basic_type, real_type{
 		basic_real(std::size_t bits_, bool ieee754)
-			: basic_type(bits_, "r"), m_is_ieee754(ieee754){}
+			: basic_type(bits_, "r"), is_ieee754(ieee754){}
 		
-		bool is_ieee754() const noexcept override{ return m_is_ieee754; }
-			
-		bool m_is_ieee754;
+		const bool is_ieee754;
 	};
 	
 	struct basic_function: basic_type, function_type{
@@ -67,27 +122,21 @@ namespace purson{
 		public:
 			const type *get(std::string_view name) const override{
 				switch(name[0]){
-					case 'u':
-					case 'i':{
-						bool signed_ = (name[0] != 'u');
-						std::size_t substr_beg = (signed_ ? 0 : 1);
-						
-						auto substr = name.substr(substr_beg);
-						
-						if(substr.substr(0, 3) == "int"){
-							if((substr == "int") || (substr == "int32")) return &m_int_types[(substr_beg * 4) + 2];
-							else if(substr == "int64") return &m_int_types[(substr_beg * 4) + 3];
-							else if(substr == "int16") return &m_int_types[(substr_beg * 4) + 1];
-							else if(substr == "int8") return &m_int_types[(substr_beg * 4)];
+					case 'I':{
+						if(name.substr(0, 7) == "Integer"){
+							if((name == "Integer") || (name == "Integer32")) return &m_integer_types[2];
+							else if(name == "Integer64") return &m_integer_types[3];
+							else if(name == "Integer16") return &m_integer_types[1];
+							else if(name == "Integer8") return &m_integer_types[0];
 						}
 						
 						break;
 					}
 					
-					case 'r':{
-						if(name.substr(0, 4) == "real"){
-							if((name == "real") || (name == "real32")) return &m_real_types[0];
-							else if(name == "real64") return &m_real_types[1];
+					case 'R':{
+						if(name.substr(0, 4) == "Real"){
+							if((name == "Real") || (name == "Real32")) return &m_real_types[0];
+							else if(name == "Real64") return &m_real_types[1];
 						}
 						
 						break;
@@ -99,15 +148,37 @@ namespace purson{
 				return nullptr;
 			}
 			
-			const integer_type *integer(std::uint32_t bits, bool is_signed) const override{
+			const natural_type *natural(std::uint32_t bits) const override{
 				switch(bits){
 					case 8:
 					case 16:
 					case 32:
-					case 64:{
-						auto idx = (int)std::log2(bits) - 3;
-						return &m_int_types[(!is_signed * 4) + idx];
-					}
+					case 64:
+						return &m_natural_types[(int)std::log2(bits) - 3];
+					
+					default: return nullptr;
+				}
+			}
+			
+			const integer_type *integer(std::uint32_t bits) const override{
+				switch(bits){
+					case 8:
+					case 16:
+					case 32:
+					case 64:
+						return &m_integer_types[(int)std::log2(bits) - 3];
+					
+					default: return nullptr;
+				}
+			}
+			
+			const rational_type *rational(const integer_type *integer_type_) const override{
+				switch(integer_type_->bits()){
+					case 8:
+					case 16:
+					case 32:
+					case 64:
+						return &m_rational_types[(int)std::log2(integer_type_->bits()) - 3];
 					
 					default: return nullptr;
 				}
@@ -162,9 +233,16 @@ namespace purson{
 			}
 			
 		private:
-			basic_integer m_int_types[8]{
-				{8, true}, {16, true}, {32, true}, {64, true},
-				{8, false}, {16, false}, {32, false}, {64, false}
+			basic_natural m_natural_types[4]{
+				{8}, {16}, {32}, {64}
+			};
+			
+			basic_integer m_integer_types[4]{
+				{8}, {16}, {32}, {64}
+			};
+			
+			basic_rational m_rational_types[4]{
+				{16}, {32}, {64}, {128}
 			};
 			
 			basic_real m_real_types[2]{

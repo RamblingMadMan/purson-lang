@@ -32,10 +32,8 @@ namespace purson{
 					m_type = types->integer(32);
 				else if(mpz_fits_slong_p(m_val))
 					m_type = types->integer(64);
-				else if(mpz_fits_ulong_p(m_val))
-					m_type = types->integer(64, false);
 				else
-					m_type = types->integer(64);
+					throw expr_error{"integer literal is too large to fit in any underlying type"};
 			}
 			
 			~integer_literal_expr(){
@@ -47,6 +45,29 @@ namespace purson{
 		private:
 			mpz_t m_val;
 			const integer_type *m_type;
+	};
+	
+	class natural_literal_expr: public numeric_literal_expr{
+		public:
+			natural_literal_expr(std::string_view lit, const typeset *types){
+				detail::init_set_mpz(m_val, lit);
+				if(mpz_fits_uint_p(m_val))
+					m_type = types->natural(32);
+				else if(mpz_fits_ulong_p(m_val))
+					m_type = types->natural(64);
+				else
+					throw expr_error{"natural literal is too large to fit in any underlying type"};
+			}
+			
+			~natural_literal_expr(){
+				mpz_clear(m_val);
+			}
+			
+			const natural_type *value_type() const noexcept override{ return m_type; }
+			
+		private:
+			mpz_t m_val;
+			const natural_type *m_type;
 	};
 	
 	class fraction_literal_expr: public numeric_literal_expr{
@@ -68,7 +89,7 @@ namespace purson{
 			
 			~fraction_literal_expr(){
 				mpq_clear(m_val);
-			}
+ 			}
 			
 		private:
 			mpq_t m_val;

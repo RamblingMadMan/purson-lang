@@ -16,17 +16,37 @@ namespace purson{
 	struct unary_op_tag_t{} inline constexpr unary_op;
 	
 	enum class operator_type{
-		add, sub, mul, div, mod,
+		comma,
+		add, sub, mul, div, mod, pow,
 		equ, neq, lt, gt, lte, gte,
 		inc, dec,
 		set,
-		ret, type
+		ret, type, ret_type
 	};
+	
+	inline std::size_t binary_op_precedence(operator_type binop){
+		#define PRECEDENCE_BASE __COUNTER__
+		switch(binop){
+			case operator_type::comma: return __COUNTER__ - PRECEDENCE_BASE;
+			
+			case operator_type::pow: return __COUNTER__ - PRECEDENCE_BASE;
+			
+			case operator_type::div:
+			case operator_type::mul: return __COUNTER__ - PRECEDENCE_BASE;
+			
+			case operator_type::add:
+			case operator_type::sub: return __COUNTER__ - PRECEDENCE_BASE;
+			
+			default: throw operator_error{"invalid binary operator"};
+		}
+		#undef PRECEDENCE_BASE
+	}
 	
 	inline std::optional<operator_type> op_type_from_str(std::string_view str){
 		if(!str.size()) return std::nullopt;
 		else if(str.size() == 1){
 			switch(str[0]){
+				case ',': return operator_type::comma;
 				case '+': return operator_type::add;
 				case '-': return operator_type::sub;
 				case '*': return operator_type::mul;
@@ -42,7 +62,13 @@ namespace purson{
 		else if(str.size() == 2){
 			switch(str[0]){
 				case '+': return str[1] == '+' ? std::make_optional(operator_type::inc) : std::nullopt;
-				case '-': return str[1] == '-' ? std::make_optional(operator_type::dec) : std::nullopt;
+				case '-':{
+					switch(str[1]){
+						case '-': return operator_type::dec;
+						case '>': return operator_type::ret_type;
+						default: return std::nullopt;
+					}
+				}
 				
 				case '=':{
 					switch(str[1]){

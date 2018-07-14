@@ -31,8 +31,9 @@ int main(int argc, char *argv[]){
 	std::setlocale(LC_ALL, PURSON_DEFAULT_LOCALE);
 	
 	std::string_view ver = "dev";
+	auto types = purson::types(ver);
 	
-	fmt::print("Purson REPL.\n");
+	fmt::print("Purson REPL\n");
 	
 	char *input;
 	
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]){
 		
 		try{
 			auto tokens = purson::lex(ver, "REPL", input_str);
-			auto exprs = purson::parse(ver, tokens);
+			auto exprs = purson::parse_repl(ver, tokens, types);
 			
 			fmt::print("{} {}\n", exprs.size(), exprs.size() > 1 ? "expressions" : "expression");
 		}

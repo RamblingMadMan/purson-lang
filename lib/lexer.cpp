@@ -16,9 +16,11 @@ namespace purson{
 		return
 			(kw == "var") ||
 			(kw == "fn") ||
+			(kw == "type") ||
+			(kw == "axiom") ||
+			(kw == "match") ||
 			(kw == "if") ||
-			(kw == "else") ||
-			(kw == "type");
+			(kw == "else");
 	}
 	
 	bool is_bracket(std::uint32_t cp){

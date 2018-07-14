@@ -1,15 +1,15 @@
-#ifndef PURSON_TYPES_CHARACTER_HPP
-#define PURSON_TYPES_CHARACTER_HPP 1
+#ifndef PURSON_AXIOMS_CHARACTER_HPP
+#define PURSON_AXIOMS_CHARACTER_HPP 1
 
 #include "base.hpp"
 
 namespace purson{
-	struct ascii_character_type: character_type{};
-	struct utf_character_type: character_type{};
+	struct ascii_character_axiom: character_axiom{};
+	struct utf_character_axiom: character_axiom{};
 	
-	struct utf8_character_type: utf_character_type{};
-	struct utf16_character_type: utf_character_type{};
-	struct utf32_character_type: utf_character_type{};
+	struct utf8_character_axiom: utf_character_axiom{};
+	struct utf16_character_axiom: utf_character_axiom{};
+	struct utf32_character_axiom: utf_character_axiom{};
 }
 
-#endif // !PURSON_TYPES_CHARACTER_HPP
+#endif // !PURSON_AXIOMS_CHARACTER_HPP

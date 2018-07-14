@@ -8,16 +8,11 @@
  * @headerfile types.hpp
  * 
  * Constructs describing the type system of purson
- * 
- * Purson is statically typed, but types are usually inferred.
  **/
 
-#include "exception.hpp"
 #include "types/numeric.hpp"
 
 namespace purson{
-	class type_error: public exception{ using exception::exception; };
-	
 	/**
 	 * Set of types within the language
 	 **/
@@ -32,25 +27,43 @@ namespace purson{
 			virtual const type *get(std::string_view name) const = 0;
 			
 			/**
+			 * Get natural type
+			 * 
+			 * @param[in] bits number of bits in underlying type
+			 * @returns nullptr if type not found, otherwise the natural type
+			 **/
+			virtual const natural_type *natural(std::uint32_t bits) const = 0;
+			
+			/**
 			 * Get integer type
 			 * 
-			 * @param[in] bits number of bits in integer
-			 * @param[in] signed_ whether the integer is signed
+			 * @param[in] bits number of bits in underlying type
 			 * @returns nullptr if type not found, otherwise the integer type
 			 **/
-			virtual const integer_type *integer(std::uint32_t bits, bool signed_ = true) const = 0;
+			virtual const integer_type *integer(std::uint32_t bits) const = 0;
+			
+			/**
+			 * Get rational type
+			 * 
+			 * @returns nullptr if type not found, otherwise the rational type
+			 **/
+			virtual const rational_type *rational(const integer_type *integer_type_) const = 0;
 			
 			/**
 			 * Get real type
 			 * 
-			 * @param[in] bits number of bits in real
-			 * @param[in] ieee754 whether the real is a ieee754 float
+			 * @param[in] bits number of bits in underlying type
+			 * @param[in] ieee754 whether the underlying type is a ieee754 float
 			 * @returns nullptr if type not found, otherwise the real type
 			 **/
 			virtual const real_type *real(std::uint32_t bits, bool ieee754 = true) const = 0;
 			
 			/**
 			 * Get function type
+			 * 
+			 * @param[in] return_type type for return value
+			 * @param[in] param_types types for the parameters
+			 * @returns nullptr if type not found, otherwise the function type
 			 **/
 			virtual const function_type *function(const type *return_type, const std::vector<const type*> &param_types) const = 0;
 	};

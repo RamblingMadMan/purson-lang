@@ -3,14 +3,19 @@
 
 #include <cstddef>
 
+#include "../exception.hpp"
+
 namespace purson{
-	//! Base type of all types.
-	//! Programming tool and implementation detail
+	class type_error: public exception{ using exception::exception; };
+
+	//! Base class for types
 	struct type{
 		virtual ~type() = default;
 		virtual std::size_t bits() const noexcept = 0;
 		virtual std::string_view str() const noexcept = 0;
 	};
+	
+	const type *promote_type(const type *a, const type *b);
 	
 	struct arithmetic_type: virtual type{};
 	

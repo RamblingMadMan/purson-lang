@@ -7,6 +7,7 @@
 #include "token.hpp"
 #include "exception.hpp"
 #include "expressions/base.hpp"
+#include "types.hpp"
 
 namespace purson{
 	class parser_error: public source_error{ using source_error::source_error; };
@@ -19,9 +20,17 @@ namespace purson{
 	 * @returns AST of parsed source code
 	 **/
 	
-	std::vector<std::shared_ptr<expr>> parse(std::string_view ver, const std::vector<token> &tokens);
+	std::vector<std::shared_ptr<expr>> parse(
+		std::string_view ver,
+		const std::vector<token> &tokens,
+		const typeset *types = nullptr
+	);
 	
-	std::vector<std::shared_ptr<expr>> parse_repl(std::string_view ver, const std::vector<token> &tokens);
+	std::vector<std::shared_ptr<expr>> parse_repl(
+		std::string_view ver,
+		const std::vector<token> &tokens,
+		const typeset *types = nullptr
+	);
 }
 
 #endif // !PURSON_PARSER_HPP

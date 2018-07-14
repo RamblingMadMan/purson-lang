@@ -95,41 +95,55 @@ namespace purson{
 				throw parser_error{it->loc(), "expected return type or definition after function parameters"};
 		}
 		
-		if(it->str() == ":"){
-			// return type
+		if(it->str() == "->"){
+			// return value axiom
 			++it;
 			if(it == end)
-				throw parser_error{fn.loc(), "unexpected end of tokens after type specifier operator"};
+				throw parser_error{fn.loc(), "unexpected end of tokens after return value axiom operator"};
 			else if((it->type() != token_type::id) || !(ret_ty = scope.get_type(it->str())))
-				throw parser_error{it->loc(), "expected return type after type specifier operator"};
+				throw parser_error{it->loc(), "expected axiom after return value axiom operator"};
 			
 			++it;
 			if(it == end)
 				throw parser_error{fn.loc(), "unexpected end of tokens after function declaration"};
 		}
 		
+		std::vector<std::string_view> param_names;
+		std::vector<const type*> param_types;
+		
+		param_names.reserve(params.size());
+		param_types.reserve(params.size());
+		
+		for(auto &&param : params){
+			param_names.push_back(param.first->str());
+			param_types.push_back(param.second);
+		}
+		
 		if(delim_fn(*it)){
 			// simple declaration
-			
-			std::vector<std::string_view> param_names;
-			std::vector<const type*> param_types;
-			
-			param_names.reserve(params.size());
-			param_types.reserve(params.size());
-			
-			for(auto &&param : params){
-				param_names.push_back(param.first->str());
-				param_types.push_back(param.second);
-			}
-			
 			return std::make_shared<fn_declaration_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_names);
 		}
-		else if(it->str() == "=>"){
+		
+		parser_scope fn_scope(scope);
+		
+		auto param_decls = [&params, &param_names, &param_types](){
+			std::vector<std::shared_ptr<lvalue_expr>> decls;
+			decls.reserve(params.size());
+			for(std::size_t i = 0; i < params.size(); i++)
+				decls.emplace_back(std::make_shared<var_decl_expr>(param_names[i], param_types[i]));
+			
+			return decls;
+		};
+		
+		if(it->str() == "=>"){
 			// expression as return statement
+			auto decls = param_decls();
+			for(auto &&decl : decls)
+				fn_scope.set_var(decl->name(), std::move(decl));
 			
 			++it;
 			auto val_it = it;
-			auto ret_val = parse_value(delim_fn, it, end, scope);
+			auto ret_val = parse_value(delim_fn, it, end, fn_scope);
 			if(ret_ty && (ret_val->value_type() != ret_ty))
 				throw parser_error{val_it->loc(), "return value has type different to specified return type"};
 			else
@@ -146,7 +160,7 @@ namespace purson{
 				param_types.push_back(param.second);
 			}
 			
-			auto decl = std::make_shared<fn_declaration_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_names);
+			auto decl = std::make_shared<fn_declaration_expr>(fn_name ? fn_name->str() : "", fn_scope.typeset()->function(ret_ty, param_types), param_names);
 			auto ret = std::make_shared<return_expr>(std::move(ret_val));
 			return std::make_shared<fn_definition_expr>(std::move(decl), std::move(ret));
 		}
@@ -156,13 +170,14 @@ namespace purson{
 		}
 		else if(it->str() == "="){
 			// function alias
+			throw parser_error{it->loc(), "function aliases not implemented"};
 			
 			if(!fn_name)
 				throw parser_error{it->loc(), "can not create an unnamed function alias"};
-			
-			throw parser_error{it->loc(), "function aliases not implemented"};
 		}
 		else
 			throw parser_error{fn.loc(), "unexpected expression after function declaration"};
+		
+		throw parser_error{fn.loc(), "unreachable error. how the hell'd ya get here big boi?"};
 	}
 }
