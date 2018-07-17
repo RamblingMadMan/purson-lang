@@ -7,12 +7,15 @@
 
 namespace purson{
 	class type_error: public exception{ using exception::exception; };
-
+	
 	//! Base class for types
 	struct type{
 		virtual ~type() = default;
 		virtual std::size_t bits() const noexcept = 0;
 		virtual std::string_view str() const noexcept = 0;
+		
+		virtual std::size_t num_members() const noexcept{ return 0; }
+		virtual const std::pair<std::string_view, const type*> *members() const noexcept{ return nullptr; }
 	};
 	
 	const type *promote_type(const type *a, const type *b);

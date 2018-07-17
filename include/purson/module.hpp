@@ -4,21 +4,25 @@
 #include <vector>
 #include <memory>
 
+#include "exception.hpp"
 #include "expressions/base.hpp"
 
 namespace purson{
+	class module_error: public exception{ using exception::exception; };
+	
 	class module{
 		public:
 			virtual ~module() = default;
 			virtual void *get_fn_ptr(std::string_view mangled_name) = 0;
 	};
 	
-	class object_module: public virtual module{};
+	class jit_module: public virtual module{
+		public:
+			virtual void compile(const std::vector<std::shared_ptr<expr>> &ast) = 0;
+	};
 	
-	class repl_module: public virtual module{};
-	
-	std::unique_ptr<repl_module> make_repl_module(const std::vector<std::shared_ptr<expr>> &ast = {});
-	std::unique_ptr<object_module> make_object_module(const std::vector<std::shared_ptr<expr>> &ast = {});
+	std::unique_ptr<jit_module> make_jit_module(std::string_view name, const std::vector<std::shared_ptr<expr>> &ast = {});
+	std::unique_ptr<module> make_static_module(std::string_view name, const std::vector<std::shared_ptr<expr>> &ast);
 }
 
 #endif // !PURSON_MODULE_HPP

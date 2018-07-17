@@ -10,6 +10,7 @@
 #include "purson/expressions.hpp"
 #include "purson/lexer.hpp"
 #include "purson/parser.hpp"
+#include "purson/module.hpp"
 
 #ifdef _WIN32
 // get your shit together windows
@@ -60,9 +61,23 @@ int main(int argc, char *argv[]){
 		else
 			input_str = input_str_v;
 		
+		std::unique_ptr<purson::jit_module> module;
+		
+		try{
+			module = purson::make_jit_module("repl");
+		}
+		catch(const purson::module_error &err){
+			fmt::print("[INTERNAL ERROR] {}\n", err.what());
+		}
+		catch(...){
+			throw;
+		}
+		
 		try{
 			auto tokens = purson::lex(ver, "REPL", input_str);
 			auto exprs = purson::parse_repl(ver, tokens, types);
+			
+			module->compile(exprs);
 			
 			fmt::print("{} {}\n", exprs.size(), exprs.size() > 1 ? "expressions" : "expression");
 		}

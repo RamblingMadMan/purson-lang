@@ -1,10 +1,13 @@
 #ifndef PURSON_EXPRESSIONS_LITERAL_HPP
 #define PURSON_EXPRESSIONS_LITERAL_HPP 1
 
+#include <cmath>
+
 #include <gmp.h>
 #include <mpfr.h>
 
 #include "base.hpp"
+#include "../types.hpp"
 
 namespace purson{
 	//! base for all literal expressions
@@ -40,6 +43,8 @@ namespace purson{
 				mpz_clear(m_val);
 			}
 			
+			const mpz_t &value() const noexcept{ return m_val; }
+			
 			const integer_type *value_type() const noexcept override{ return m_type; }
 			
 		private:
@@ -63,6 +68,8 @@ namespace purson{
 				mpz_clear(m_val);
 			}
 			
+			const mpz_t &value() const noexcept{ return m_val; }
+			
 			const natural_type *value_type() const noexcept override{ return m_type; }
 			
 		private:
@@ -70,9 +77,9 @@ namespace purson{
 			const natural_type *m_type;
 	};
 	
-	class fraction_literal_expr: public numeric_literal_expr{
+	class rational_literal_expr: public numeric_literal_expr{
 		public:
-			fraction_literal_expr(std::string_view num, std::string_view denom, const typeset *types){
+			rational_literal_expr(std::string_view num, std::string_view denom, const typeset *types){
 				mpq_init(m_val);
 				
 				mpz_t mpz_num, mpz_denom;
@@ -82,18 +89,35 @@ namespace purson{
 				mpq_set_num(m_val, mpz_num);
 				mpq_set_den(m_val, mpz_denom);
 				
+				std::size_t bits = std::pow(2, std::ceil(std::log2(std::max(mpz_sizeinbase(mpz_num, 2), mpz_sizeinbase(mpz_denom, 2)))));
+				
+				switch(bits){
+					case 8: 
+					case 16:
+					case 32:
+					case 64: break;
+					default:
+						throw expr_error{"rational literal is too large to fit in any underlying type"};
+				}
+				
+				m_type = types->rational(types->integer(bits));
+				
 				mpq_canonicalize(m_val);
 				
 				mpz_clears(mpz_num, mpz_denom);
 			}
 			
-			~fraction_literal_expr(){
+			~rational_literal_expr(){
 				mpq_clear(m_val);
  			}
+ 			
+ 			const mpq_t &value() const noexcept{ return m_val; }
+ 			
+ 			const rational_type *value_type() const noexcept{ return m_type; }
 			
 		private:
 			mpq_t m_val;
-			const integer_type *m_type;
+			const rational_type *m_type;
 	};
 	
 	class real_literal_expr: public numeric_literal_expr{
@@ -106,6 +130,8 @@ namespace purson{
 			~real_literal_expr(){
 				mpfr_clear(m_val);
 			}
+			
+			const mpfr_t &value() const noexcept{ return m_val; }
 			
 			const real_type *value_type() const noexcept override{ return m_type; }
 			

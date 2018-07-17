@@ -108,29 +108,29 @@ namespace purson{
 				throw parser_error{fn.loc(), "unexpected end of tokens after function declaration"};
 		}
 		
-		std::vector<std::string_view> param_names;
+		std::vector<std::pair<std::string_view, const type*>> param_info;
 		std::vector<const type*> param_types;
 		
-		param_names.reserve(params.size());
+		param_info.reserve(params.size());
 		param_types.reserve(params.size());
 		
 		for(auto &&param : params){
-			param_names.push_back(param.first->str());
+			param_info.emplace_back(param.first->str(), param.second);
 			param_types.push_back(param.second);
 		}
 		
 		if(delim_fn(*it)){
 			// simple declaration
-			return std::make_shared<fn_declaration_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_names);
+			return std::make_shared<fn_decl_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_info);
 		}
 		
 		parser_scope fn_scope(scope);
 		
-		auto param_decls = [&params, &param_names, &param_types](){
+		auto param_decls = [&params, &param_info, &param_types](){
 			std::vector<std::shared_ptr<lvalue_expr>> decls;
 			decls.reserve(params.size());
 			for(std::size_t i = 0; i < params.size(); i++)
-				decls.emplace_back(std::make_shared<var_decl_expr>(param_names[i], param_types[i]));
+				decls.emplace_back(std::make_shared<var_decl_expr>(param_info[i].first, param_types[i]));
 			
 			return decls;
 		};
@@ -160,9 +160,9 @@ namespace purson{
 				param_types.push_back(param.second);
 			}
 			
-			auto decl = std::make_shared<fn_declaration_expr>(fn_name ? fn_name->str() : "", fn_scope.typeset()->function(ret_ty, param_types), param_names);
+			auto decl = std::make_shared<fn_decl_expr>(fn_name ? fn_name->str() : "", fn_scope.typeset()->function(ret_ty, param_types), param_info);
 			auto ret = std::make_shared<return_expr>(std::move(ret_val));
-			return std::make_shared<fn_definition_expr>(std::move(decl), std::move(ret));
+			return std::make_shared<fn_def_expr>(std::move(decl), std::move(ret));
 		}
 		else if(it->str() == "{"){
 			// complex/imperative function body

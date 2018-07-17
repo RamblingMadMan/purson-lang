@@ -13,6 +13,9 @@ set(
 	parser.hpp
 	parser.cpp
 	parser/function.cpp
+	llvm.hpp
+	llvm.cpp
+	module.cpp
 )
 
 add_library(purson ${PURSON_SOURCES})
