@@ -48,6 +48,16 @@ Here is a list of completed library features:
 ### Purson REPL
 A REPL environment for testing and prototyping. GNU Readline is used for 
 autocompletion and history.
+  
+Expressions are treated as if written in the body of a procedural function like so:
+
+```
+fn repl(){
+	// > 
+}
+```
+
+Then the value result of the expression is printed.
 
 ## Dependencies
 
