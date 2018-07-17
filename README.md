@@ -40,9 +40,9 @@ This library contains functions for lexing, parsing and compiling Purson code as
 Here is a list of completed library features:
 
 - [X] Lexer
-- [?] Parser
+- [X] Parser
 - [ ] Compiler
-- [?] Type system
+- [ ] Type system
 - [ ] Module system
 
 ### Purson REPL
