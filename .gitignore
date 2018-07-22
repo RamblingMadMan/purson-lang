@@ -4,7 +4,7 @@ cmake-build-debug
 .idea
 .kdev4
 doc
-
+*.kate-swp
 .directory
 purson-lang.kdev4
 

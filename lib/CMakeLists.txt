@@ -16,7 +16,8 @@ set(
 	llvm.hpp
 	llvm.cpp
 	module.cpp
-        compile_llvm/var.cpp)
+	compile_llvm/var.cpp
+)
 
 add_library(purson ${PURSON_SOURCES})
 
