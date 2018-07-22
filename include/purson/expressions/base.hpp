@@ -11,7 +11,7 @@ namespace purson{
 	class expr{
 		public:
 			virtual ~expr() = default;
-			//virtual std::string str() const noexcept = 0;
+			virtual std::string_view str() const noexcept{ return "no string for this expression :^)"; };
 	};
 	
 	//! base for all expressions with a value

@@ -2,21 +2,61 @@
 
 namespace purson{
 	llvm::Value *llvm_compile(const expr *expr_, llvm_state *state){
-		if(auto lit = dynamic_cast<const literal_expr*>(expr_))
+		if(auto rvalue = dynamic_cast<const rvalue_expr*>(expr_))
+			return llvm_compile_rvalue(rvalue, state);
+		else
+			throw module_error{fmt::format("unexpected valueless expression '{}'", expr_->str())};
+	}
+
+	llvm::Value *llvm_compile_rvalue(const rvalue_expr *rvalue, llvm_state *state){
+		if(auto lit = dynamic_cast<const literal_expr*>(rvalue))
 			return llvm_compile_literal(lit, state);
-		else if(auto def = dynamic_cast<const fn_def_expr*>(expr_)){
+		else if(auto var_def = dynamic_cast<const var_def_expr*>(rvalue))
+			return llvm_compile_var_def(var_def, state);
+		else if(auto var_decl = dynamic_cast<const var_decl_expr*>(rvalue))
+			return llvm_compile_var_decl(var_decl, state);
+		else if(auto decl = dynamic_cast<const fn_decl_expr*>(rvalue)){
+			llvm_compile_fn_decl(decl, state);
+			return nullptr;
+		}
+		else if(auto def = dynamic_cast<const fn_def_expr*>(rvalue)){
 			llvm_compile_fn_def(def, state);
 			return nullptr;
 		}
-		else
-			throw module_error{"unexpected expression type"};
+		else if(auto call = dynamic_cast<const fn_call_expr*>(rvalue)){
+			if(!state->builder())
+				throw module_error{"function call expression outside of a function body"};
+
+			return llvm_compile_fn_call(call, state);
+		}
+		else if(auto ret = dynamic_cast<const return_expr*>(rvalue)){
+			if(!state->builder())
+				throw module_error{"return expression outside of a function body"};
+
+			if(dynamic_cast<const unit_type*>(ret->value()->value_type()))
+				return state->builder()->CreateRetVoid();
+			else{
+				try{
+					auto llvm_ret_val = llvm_compile_rvalue(ret->value(), state);
+					return state->builder()->CreateRet(llvm_ret_val);
+				}
+				catch(const module_error &err){
+					throw module_error{fmt::format("compile return value -> \n\t{}", err.what())};
+				}
+				catch(...){
+					throw;
+				}
+			}
+		}
+		else{
+			throw module_error{fmt::format("unexpected {} value expression '{}'", rvalue->value_type()->str(), rvalue->str())};
+		}
 	}
 	
-	llvm::Function *llvm_compile_fn_decl(const fn_decl_expr *decl, llvm_state *state){
+	llvm_fn_gen_t &llvm_compile_fn_decl(const fn_decl_expr *decl, llvm_state *state){
 		throw module_error{"function declaration not implemented. define function as part of declaration"};
 		
-		/*
-		auto ret_ty = llvm_type(decl->return_type());
+		auto llvm_ret_ty = llvm_type(decl->return_type());
 		std::vector<llvm::Type*> param_tys;
 		param_tys.reserve(decl->params().size());
 		for(auto &&param : decl->params()){
@@ -24,22 +64,39 @@ namespace purson{
 			param_tys.push_back(llvm_type(param.second));
 		}
 		
-		auto fn_ty = llvm::FunctionType::get(ret_ty, param_tys, false);
-		auto ret = llvm::Function::Create(
-			fn_ty,
-			llvm::Function::LinkageTypes::AvailableExternallyLinkage,
-			std::string(decl->name()),
-			state->module()
-		);
+		auto llvm_fn_ty = llvm::FunctionType::get(llvm_ret_ty, param_tys, false);
 		
-		state->add_fn(decl->name(), ret);
+		auto ret = [decl, llvm_ret_ty, llvm_fn_ty, state](const type *ret_type_, const std::vector<const type*> &param_tys_){
+			std::vector<const type*> criteria{ret_type_};
+			criteria.reserve(param_tys_.size() + 1);
+			criteria.insert(end(criteria), begin(param_tys_), end(param_tys_));
+			auto mangled = mangle_fn_name(decl->name(), ret_type_, param_tys_);
+			auto fn = state->get_mangled_fn(mangled);
+			if(!fn)
+				throw module_error{"function not defined"};
+			
+			return fn;
+		};
 		
-		return ret;
-		*/
+		return state->add_fn(decl->name(), std::move(ret));
 	}
 	
 	llvm_fn_gen_t &llvm_compile_fn_def(const fn_def_expr *def, llvm_state *state){
-		auto ret = [def, state, matches = std::map<std::vector<const type*>, llvm::Function*>{}](const type *ret_ty_, const std::vector<const type*> &param_tys_) mutable{
+		bool is_full_def = true;
+
+		if(!def->return_type())
+			is_full_def = false;
+		else{
+			for(auto &&param : def->params()){
+				if(!param.second){
+					is_full_def = false;
+					break;
+				}
+			}
+		}
+
+		auto ret = [&is_full_def, def, state, matches = std::map<std::string, llvm::Function*>{}](const type *ret_ty_, const std::vector<const type*> &param_tys_) mutable{
+			// TODO: move type calculation out of functor. just checking where needed
 			auto ret_ty = def->return_type();
 			auto llvm_ret_ty = llvm_type(ret_ty);
 			if(ret_ty_){
@@ -82,10 +139,9 @@ namespace purson{
 				param_tys.push_back(param_ty);
 				llvm_param_tys.push_back(llvm_param_ty);
 			}
-			
-			std::vector<const type*> criteria{ret_ty_};
-			criteria.insert(end(criteria), begin(param_tys), end(param_tys));
-			auto res = matches.find(criteria);
+
+			auto mangled_name = mangle_fn_name(def->name(), ret_ty, param_tys);
+			auto res = matches.find(mangled_name);
 			if(res != end(matches))
 				return res->second;
 			
@@ -99,27 +155,80 @@ namespace purson{
 			}
 			else{
 				auto fn_ty = llvm::FunctionType::get(llvm_ret_ty, llvm_param_tys, false);
+
+				fn = llvm::Function::Create(fn_ty, llvm::Function::ExternalLinkage, mangled_name, state->module());
 				
-				fn = llvm::Function::Create(fn_ty, llvm::Function::AvailableExternallyLinkage, def->name().data(), state->module());
-				
-				auto emplace_res = matches.emplace(criteria, fn);
+				auto emplace_res = matches.emplace(mangled_name, fn);
 				if(!emplace_res.second)
 					throw module_error{"could not emplace function in state"};
 				
 				auto bb = llvm::BasicBlock::Create(llvm_ctx, "body", fn);
-				llvm::IRBuilder<> builder(bb);
+				llvm::IRBuilder<> builder(llvm_ctx);
+				builder.SetInsertPoint(bb);
 				
 				llvm_state fn_state(state->module(), state, &builder);
-				for(std::size_t i = 0; i < def->params().size(); i++)
-					fn_state.set_var(def->params()[i].first, param_tys_[i], fn->arg_begin() + i);
-				
-				auto body_val = llvm_compile(def->body(), &fn_state);
-				
-				return fn;
+				for(std::size_t i = 0; i < def->params().size(); i++){
+					auto arg = fn->arg_begin() + i;
+					fn_state.set_var(def->params()[i].first, param_tys_[i], arg);
+				}
+
+				try{
+					if(auto block = dynamic_cast<const block_expr*>(def->body())){
+						for(auto &&expr : block->exprs()){
+							auto val = llvm_compile_rvalue(expr.get(), &fn_state);
+						}
+					}
+					else if(auto rvalue = dynamic_cast<const rvalue_expr*>(def->body()))
+						auto body_val = llvm_compile_rvalue(rvalue, &fn_state);
+					else
+						throw module_error{fmt::format("unexpected return expression '{}'", def->body()->str())};
+
+					if(dynamic_cast<const unit_type*>(def->return_type()))
+						builder.CreateRetVoid();
+					else if(mangled_name == "main")
+						builder.CreateRet(builder.getInt32(0));
+
+					fmt::print(stderr, "info: function '{}' compiled\n", mangled_name);
+
+					state->set_mangled_fn(mangled_name, fn);
+
+					return fn;
+				}
+				catch(const module_error &err){
+					throw module_error{fmt::format("compile fn def ->\n\t{}", err.what())};
+				}
+				catch(...){
+					throw;
+				}
 			}
 		};
-		
+
+		if(is_full_def) ret(nullptr, {});
+
 		return state->add_fn(def->name(), std::move(ret));
+	}
+	
+	llvm::Value *llvm_compile_fn_call(const fn_call_expr *call, llvm_state *state){
+		if(call->args().size()){
+			std::vector<const type *> subs{call->fn()->return_type()};
+			std::vector<llvm::Value *> llvm_arg_values;
+			llvm_arg_values.reserve(subs.size());
+			subs.reserve(call->args().size() + 1);
+			for(auto &&arg : call->args()){
+				subs.push_back(arg->value_type());
+				llvm_arg_values.push_back(llvm_compile(arg.get(), state));
+			}
+
+			subs.erase(begin(subs));
+			auto mangled = mangle_fn_name(call->fn()->name(), call->fn()->return_type(), subs);
+			auto fn = state->get_mangled_fn(mangled);
+			return state->builder()->CreateCall(fn, llvm_arg_values);
+		}
+		else{
+			auto mangled = mangle_fn_name(call->fn()->name(), call->fn()->return_type(), {});
+			auto fn = state->get_mangled_fn(mangled);
+			return state->builder()->CreateCall(fn);
+		}
 	}
 	
 	llvm::Constant *llvm_compile_literal(const literal_expr *lit, llvm_state *state){

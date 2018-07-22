@@ -27,6 +27,13 @@ namespace purson{
 			virtual const type *get(std::string_view name) const = 0;
 			
 			/**
+			 * Get unit type
+			 * 
+			 * @returns the unit type
+			 **/
+			virtual const unit_type *unit() const noexcept = 0;
+			
+			/**
 			 * Get natural type
 			 * 
 			 * @param[in] bits number of bits in underlying type

@@ -1,7 +1,7 @@
 find_package(ICU REQUIRED)
 find_package(GMP REQUIRED)
 find_package(MPFR REQUIRED)
-find_package(LLVM 6.0.0 REQUIRED)
+find_package(LLVM 5.0.0 REQUIRED)
 
 link_directories(${LLVM_LIBRARY_DIRS})
 
@@ -16,7 +16,7 @@ set(
 	llvm.hpp
 	llvm.cpp
 	module.cpp
-)
+        compile_llvm/var.cpp)
 
 add_library(purson ${PURSON_SOURCES})
 

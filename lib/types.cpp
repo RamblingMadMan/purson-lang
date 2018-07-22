@@ -73,6 +73,11 @@ namespace purson{
 			void set_str(std::string &&str_){ m_str = std::move(str_); }
 	};
 	
+	struct basic_unit: basic_type, unit_type{
+		basic_unit()
+			: basic_type(0, "u"){}
+	};
+	
 	struct basic_natural: basic_type, natural_type{
 		basic_natural(std::size_t bits_)
 			: basic_type(bits_, "n"){}
@@ -142,10 +147,19 @@ namespace purson{
 						break;
 					}
 					
+					case 'U':{
+						if(name == "Unit") return unit();
+						break;
+					}
+					
 					default: break;
 				}
 				
 				return nullptr;
+			}
+			
+			const unit_type *unit() const noexcept override{
+				return &m_unit_type;
 			}
 			
 			const natural_type *natural(std::uint32_t bits) const override{
@@ -233,6 +247,8 @@ namespace purson{
 			}
 			
 		private:
+			basic_unit m_unit_type;
+			
 			basic_natural m_natural_types[4]{
 				{8}, {16}, {32}, {64}
 			};

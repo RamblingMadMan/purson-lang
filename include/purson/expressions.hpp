@@ -7,4 +7,8 @@
 #include "expressions/var.hpp"
 #include "expressions/match.hpp"
 
+namespace purson{
+	
+}
+
 #endif // !PURSON_EXPRESSIONS_HPP

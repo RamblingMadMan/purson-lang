@@ -13,6 +13,7 @@
 #include "purson/module.hpp"
 #include "purson/expressions/literal.hpp"
 #include "purson/expressions/function.hpp"
+#include "purson/expressions/var.hpp"
 #include "purson/types/numeric.hpp"
 
 namespace purson{
@@ -20,6 +21,8 @@ namespace purson{
 	
 	inline llvm::Type *llvm_type(const type *ty){
 		if(!ty) return nullptr;
+		else if(auto unit_ty = dynamic_cast<const unit_type*>(ty))
+			return llvm::Type::getVoidTy(llvm_ctx);
 		else if(auto num_ty = dynamic_cast<const numeric_type*>(ty)){
 			if(auto real_ty = dynamic_cast<const real_type*>(ty)){
 				switch(real_ty->bits()){
@@ -83,6 +86,18 @@ namespace purson{
 				return m_fn_defs[name] = std::move(gen);
 			}
 			
+			llvm::Function *get_mangled_fn(std::string_view mangled_name){
+				auto res = m_mangled_fns.find(mangled_name);
+				if(res != end(m_mangled_fns))
+					return res->second;
+				
+				return nullptr;
+			}
+			
+			void set_mangled_fn(std::string_view mangled_name, llvm::Function *llvm_fn){
+				m_mangled_fns[mangled_name] = llvm_fn;
+			}
+			
 		private:
 			llvm::Module *m_module;
 			const llvm_state *m_parent;
@@ -90,14 +105,22 @@ namespace purson{
 			
 			std::map<std::string_view, std::pair<const type*, llvm::Value*>> m_vars;
 			std::map<std::string_view, llvm_fn_gen_t> m_fn_defs;
+			std::map<std::string_view, llvm::Function*> m_mangled_fns;
 	};
 	
 	llvm::Value *llvm_compile(const expr *expr_, llvm_state *state);
+
+	llvm::Value *llvm_compile_rvalue(const rvalue_expr *rvalue, llvm_state *state);
 	
 	llvm::Value *llvm_compile_ret(const return_expr *ret, llvm_state *state);
+
+	llvm::Value *llvm_compile_var_decl(const var_decl_expr *decl, llvm_state *state);
+	llvm::Value *llvm_compile_var_def(const var_def_expr *def, llvm_state *state);
 	
-	llvm::Function *llvm_compile_fn_decl(const fn_decl_expr *decl, llvm_state *state);
+	llvm_fn_gen_t &llvm_compile_fn_decl(const fn_decl_expr *decl, llvm_state *state);
 	llvm_fn_gen_t &llvm_compile_fn_def(const fn_def_expr *def, llvm_state *state);
+	
+	llvm::Value *llvm_compile_fn_call(const fn_call_expr *call, llvm_state *state);
 	llvm::Constant *llvm_compile_literal(const literal_expr *lit, llvm_state *state);
 }
 

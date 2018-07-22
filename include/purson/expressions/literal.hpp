@@ -14,7 +14,15 @@ namespace purson{
 	class literal_expr: public rvalue_expr{};
 	
 	//! base for all numeric literal expressions
-	class numeric_literal_expr: public literal_expr{};
+	class numeric_literal_expr: public literal_expr{
+		public:
+			numeric_literal_expr(std::string_view lit): m_str(lit){}
+
+			std::string_view str() const noexcept override{ return m_str; }
+
+		protected:
+			std::string m_str;
+	};
 	
 	namespace detail{
 		inline void init_set_mpz(mpz_t val, std::string_view lit){
@@ -29,7 +37,7 @@ namespace purson{
 	
 	class integer_literal_expr: public numeric_literal_expr{
 		public:
-			integer_literal_expr(std::string_view lit, const typeset *types){
+			integer_literal_expr(std::string_view lit, const typeset *types): numeric_literal_expr(lit){
 				detail::init_set_mpz(m_val, lit);
 				if(mpz_fits_sint_p(m_val))
 					m_type = types->integer(32);
@@ -46,6 +54,8 @@ namespace purson{
 			const mpz_t &value() const noexcept{ return m_val; }
 			
 			const integer_type *value_type() const noexcept override{ return m_type; }
+
+			std::string_view str() const noexcept override{ return m_str; }
 			
 		private:
 			mpz_t m_val;
@@ -54,7 +64,7 @@ namespace purson{
 	
 	class natural_literal_expr: public numeric_literal_expr{
 		public:
-			natural_literal_expr(std::string_view lit, const typeset *types){
+			natural_literal_expr(std::string_view lit, const typeset *types): numeric_literal_expr(lit){
 				detail::init_set_mpz(m_val, lit);
 				if(mpz_fits_uint_p(m_val))
 					m_type = types->natural(32);
@@ -79,7 +89,8 @@ namespace purson{
 	
 	class rational_literal_expr: public numeric_literal_expr{
 		public:
-			rational_literal_expr(std::string_view num, std::string_view denom, const typeset *types){
+			rational_literal_expr(std::string_view num, std::string_view denom, const typeset *types)
+				: numeric_literal_expr(std::string(num) + '/' + std::string(denom)){
 				mpq_init(m_val);
 				
 				mpz_t mpz_num, mpz_denom;
@@ -122,7 +133,8 @@ namespace purson{
 	
 	class real_literal_expr: public numeric_literal_expr{
 		public:
-			real_literal_expr(std::string_view lit, const typeset *types){
+			real_literal_expr(std::string_view lit, const typeset *types)
+				: numeric_literal_expr(lit){
 				mpfr_init_set_str(m_val, lit.data(), 10, MPFR_RNDN);
 				m_type = types->real(32);
 			}

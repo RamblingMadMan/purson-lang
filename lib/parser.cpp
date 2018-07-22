@@ -3,9 +3,11 @@
 #include "fmt/printf.h"
 
 #include "parser.hpp"
+#include "purson/expressions/var.hpp"
 
 namespace purson{
-	std::shared_ptr<expr> parse_inner(delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_inner(delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+		if(delim_fn(*it)) return nullptr;
 		switch(it->type()){
 			case token_type::integer:
 			case token_type::real:
@@ -13,6 +15,11 @@ namespace purson{
 			case token_type::ch:{
 				auto &&lit = *it;
 				return parse_literal(lit, delim_fn, ++it, end, scope);
+			}
+			
+			case token_type::id:{
+				auto &&id = *it;
+				return parse_id(id, delim_fn, ++it, end, scope);
 			}
 			
 			case token_type::op:{
@@ -30,7 +37,8 @@ namespace purson{
 		}
 	}
 	
-	std::shared_ptr<rvalue_expr> parse_value(delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_value(delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+		if(delim_fn(*it)) return nullptr;
 		switch(it->type()){
 			case token_type::integer:
 			case token_type::real:
@@ -38,6 +46,11 @@ namespace purson{
 			case token_type::ch:{
 				auto &&lit = *it++;
 				return parse_literal(lit, delim_fn, it, end, scope);
+			}
+
+			case token_type ::id:{
+				auto &&id = *it++;
+				return parse_id(id, delim_fn, it, end, scope);
 			}
 			
 			case token_type::op:{
@@ -49,20 +62,97 @@ namespace purson{
 				auto &&kw = *it++;
 				if(kw.str() == "match")
 					return parse_match(kw, delim_fn, it, end, scope);
+				else if(kw.str() == "fn")
+					return parse_fn(kw, delim_fn, it, end, scope);
+				else if(kw.str() == "var")
+					return parse_var(kw, delim_fn, it, end, scope);
 				else
 					throw parser_error{it->loc(), "unexpected keyword for value expression"};
 			}
 			
 			default:
-				throw parser_error{it->loc(), "unexpected token for value expression"};
+				throw parser_error{it->loc(), fmt::format("unexpected token '{}' for value expression", it->str())};
 		}
 	}
 	
-	std::shared_ptr<rvalue_expr> parse_leading_value(std::shared_ptr<rvalue_expr> val, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_leading_value(std::shared_ptr<const rvalue_expr> val, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		switch(it->type()){
 			case token_type::op:{
 				auto &&op = *it;
 				return parse_binary_op(std::move(val), op, delim_fn, ++it, end, scope);
+			}
+			
+			case token_type::bracket:{
+				if(it->str() == "("){
+					auto fn_ref = std::dynamic_pointer_cast<const fn_ref_expr>(val);
+					if(fn_ref){
+						auto args_delim = [](const token &tok){ return tok.str() == ")"; };
+						auto args_expr = parse_inner(args_delim, ++it, end, scope);
+						std::vector<std::shared_ptr<const rvalue_expr>> args;
+						++it; // eat closing ')'
+						
+						if(auto binop = std::dynamic_pointer_cast<const binary_op_expr>(args_expr)){
+							do_binop:
+							if(binop && (binop->operator_().op_type() == operator_type::comma)){
+								args.push_back(binop->lhs());
+								if(auto new_binop = std::dynamic_pointer_cast<const binary_op_expr>(binop->rhs())){
+									if(new_binop->operator_().op_type() == operator_type::comma){
+										binop = new_binop;
+										goto do_binop;
+									}
+								}
+								else
+									args.push_back(binop->rhs());
+							}
+							else
+								args.push_back(std::move(binop));
+						}
+						
+						std::shared_ptr<const fn_expr> best_match;
+						
+						for(auto &&fn : fn_ref->fns()){
+							if(fn->params().size() != args.size())
+								continue;
+							
+							bool good_match = true;
+							bool perfect_match = true;
+							
+							for(std::size_t i = 0; i < fn->params().size(); i++){
+								auto param_ty = fn->params()[i].second;
+								if(param_ty != args[i]->value_type()){
+									if(param_ty){
+										good_match = false;
+										break;
+									}
+									else
+										perfect_match = false;
+								}
+							}
+							
+							if(good_match){
+								if(perfect_match){
+									best_match = fn;
+									break;
+								}
+								else
+									throw parser_error{it->loc(), "only perfect function calls are currently supported (exact arity and types)"};
+							}
+						}
+						
+						if(!best_match)
+							throw parser_error{it->loc(), "no function with that id"};
+						
+						auto ret = std::make_shared<const fn_call_expr>(std::move(best_match), args);
+						if(delim_fn(*it))
+							return std::static_pointer_cast<const rvalue_expr>(std::move(ret));
+						else
+							return parse_leading_value(std::move(ret), delim_fn, it, end, scope);
+					}
+					else
+						throw parser_error{it->loc(), "unexpected opening parenthesis"};
+				}
+				else
+					throw parser_error{it->loc(), "unexpected bracket after value"};
 			}
 			
 			default:
@@ -70,7 +160,7 @@ namespace purson{
 		}
 	}
 	
-	std::shared_ptr<expr> parse_top(token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const expr> parse_top(token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		switch(it->type()){
 			case token_type::keyword:{
 				auto &&kw = *it;
@@ -82,7 +172,7 @@ namespace purson{
 		}
 	}
 	
-	std::shared_ptr<rvalue_expr> parse_unary_op(const token &op, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_unary_op(const token &op, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		auto op_opt = op_type_from_str(op.str());
 		if(!op_opt)
 			throw parser_error{op.loc(), "invalid operator"};
@@ -95,7 +185,7 @@ namespace purson{
 			case token_type::real:{
 				auto &&lit = *it;
 				auto val = parse_literal(lit, delim_fn, ++it, end, scope);
-				return std::make_shared<unary_op_expr>(*op_opt, val);
+				return std::make_shared<const unary_op_expr>(*op_opt, val);
 			}
 			
 			default:
@@ -103,7 +193,7 @@ namespace purson{
 		}
 	}
 	
-	std::shared_ptr<rvalue_expr> parse_binary_op(std::shared_ptr<rvalue_expr> lhs, const token &op, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_binary_op(std::shared_ptr<const rvalue_expr> lhs, const token &op, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		auto op_opt = op_type_from_str(op.str());
 		if(!op_opt)
 			throw parser_error{op.loc(), "invalid operator"};
@@ -117,9 +207,7 @@ namespace purson{
 				auto &&lit = *it;
 				auto val = parse_literal(lit, delim_fn, ++it, end, scope);
 				
-				
-				
-				return std::make_shared<binary_op_expr>(*op_opt, std::move(lhs), std::move(val));
+				return std::make_shared<const binary_op_expr>(*op_opt, std::move(lhs), std::move(val));
 			}
 			
 			default:
@@ -127,10 +215,10 @@ namespace purson{
 		}
 	}
 	
-	std::shared_ptr<rvalue_expr> parse_literal(const token &lit, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_literal(const token &lit, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		if(it == end) throw parser_error{lit.loc(), "unexpected end of tokens after literal"};
 		
-		std::shared_ptr<rvalue_expr> ret;
+		std::shared_ptr<const rvalue_expr> ret;
 		
 		switch(lit.type()){
 			case token_type::integer: ret = std::make_shared<integer_literal_expr>(lit.str(), scope.typeset()); break;
@@ -152,7 +240,7 @@ namespace purson{
 		}
 	}
 	
-	std::shared_ptr<rvalue_expr> parse_id(const token &id, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_id(const token &id, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		if(it == end) throw parser_error{id.loc(), "unexpected end of tokens after identifier"};
 		
 		if(auto var = scope.get_var(id.str())){
@@ -161,11 +249,18 @@ namespace purson{
 			else
 				return parse_leading_value(std::move(var), delim_fn, it, end, scope);
 		}
+		else if(auto fns = scope.get_fn(id.str()); fns.size()){
+			auto ret = std::make_shared<const fn_ref_expr>(std::move(fns));
+			if(delim_fn(*it))
+				return ret;
+			else
+				return parse_leading_value(std::move(ret), delim_fn, it, end, scope);
+		}
 		else
 			throw parser_error{id.loc(), "id does not refer to a variable"};
 	}
 	
-	std::shared_ptr<rvalue_expr> parse_match(const token &match, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_match(const token &match, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		if(it == end) throw parser_error{match.loc(), "unexpected end of tokens after match keyword"};
 		else if(it->str() != "(") throw parser_error{it->loc(), "expected match value after match keyword"};
 		
@@ -194,7 +289,7 @@ namespace purson{
 			return parse_leading_value(std::move(match_expr_), delim_fn, it, end, scope);
 	}
 	
-	std::shared_ptr<expr> parse_keyword(const token &kw, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_keyword(const token &kw, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		switch(kw.str()[0]){
 			case 'f':{
 				if(kw.str() == "fn") return parse_fn(kw, delim_fn, it, end, scope);
@@ -217,11 +312,50 @@ namespace purson{
 		throw parser_error{kw.loc(), "unimplemented keyword"};
 	}
 	
-	std::shared_ptr<lvalue_expr> parse_var(const token &var, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
-		throw parser_error{var.loc(), "variables not implemented"};
+	std::shared_ptr<const lvalue_expr> parse_var(const token &var, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+		if(it == end)
+			throw parser_error{var.loc(), "unexpected end of tokens after var keyword"};
+		else if(delim_fn(*it))
+			throw parser_error{it->loc(), "unexpected deliminator after var keyword"};
+		else if(it->type() != token_type::id)
+			throw parser_error{it->loc(), "expected identifier after var keyword"};
+
+		auto &&id = *it++;
+		if(scope.typeset()->get(id.str()))
+			throw parser_error{id.loc(), "type name can not be used for function name"};
+
+		const type *ty = nullptr;
+
+		if(it->str() == ":"){
+			++it;
+			if(it == end)
+				throw parser_error{id.loc(), "unexpected end of tokens after type specifier"};
+			else if(delim_fn(*it))
+				throw parser_error{it->loc(), "unexpected end of variable declaration"};
+			else if(it->type() != token_type::id)
+				throw parser_error{it->loc(), "expected type name after type specifier"};
+
+			ty = scope.typeset()->get(it->str());
+			if(!ty)
+				throw parser_error{var.loc(), "unknown type name"};
+
+			++it;
+		}
+
+		if(delim_fn(*it)){
+			if(!ty)
+				throw parser_error{var.loc(), "can not have untyped uninitialized variables"};
+			return std::make_shared<const var_decl_expr>(id.str(), true, ty);
+		}
+		else if(it->str() == "="){
+			auto return_expr = parse_value(delim_fn, ++it, end, scope);
+			return std::make_shared<var_def_expr>(id.str(), true, std::move(return_expr));
+		}
+		else
+			throw parser_error{it->loc(), "only variable definitions currently supported"};
 	}
 	
-	std::vector<std::shared_ptr<expr>> parse(
+	std::vector<std::shared_ptr<const expr>> parse(
 		std::string_view ver,
 		const std::vector<token> &tokens,
 		const typeset *types
@@ -229,18 +363,20 @@ namespace purson{
 		if(!types) types = purson::types(ver);
 		parser_scope scope(types);
 		
-		std::vector<std::shared_ptr<expr>> ret;
+		std::vector<std::shared_ptr<const expr>> ret;
 		
 		auto it_end = end(tokens);
 		
 		for(auto it = begin(tokens); it != it_end; ++it){
-			ret.push_back(parse_top(it, it_end, scope));
+			auto expr_ = parse_top(it, it_end, scope);
+			if(expr_)
+				ret.push_back(expr_);
 		}
 		
 		return ret;
 	}
 	
-	std::vector<std::shared_ptr<expr>> parse_repl(
+	std::vector<std::shared_ptr<const expr>> parse_repl(
 		std::string_view ver,
 		const std::vector<token> &tokens,
 		const typeset *types
@@ -248,12 +384,14 @@ namespace purson{
 		if(!types) types = purson::types(ver);
 		parser_scope scope(types);
 		
-		std::vector<std::shared_ptr<expr>> ret;
+		std::vector<std::shared_ptr<const expr>> ret;
 		
 		auto it_end = end(tokens);
 		
 		for(auto it = begin(tokens); it != it_end; ++it){
-			ret.push_back(parse_inner(default_delim, it, it_end, scope));
+			auto expr_ = parse_inner(default_delim, it, it_end, scope);
+			if(expr_)
+				ret.push_back(expr_);
 		}
 		
 		return ret;

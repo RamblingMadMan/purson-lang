@@ -18,7 +18,7 @@ namespace purson{
 			
 			const type *value_type() const noexcept override{ return m_operator.result_type(); }
 			
-			const rvalue_expr *operand() const noexcept{ return m_operand.get(); }
+			std::shared_ptr<const rvalue_expr> operand() const noexcept{ return m_operand; }
 			
 			op operator_() const noexcept override{ return m_operator; }
 			
@@ -34,8 +34,8 @@ namespace purson{
 			
 			const type *value_type() const noexcept override{ return m_operator.result_type(); }
 			
-			const rvalue_expr *lhs() const noexcept{ return m_lhs.get(); }
-			const rvalue_expr *rhs() const noexcept{ return m_rhs.get(); }
+			std::shared_ptr<const rvalue_expr> lhs() const noexcept{ return m_lhs; }
+			std::shared_ptr<const rvalue_expr> rhs() const noexcept{ return m_rhs; }
 			
 			op operator_() const noexcept override{ return m_operator; }
 			

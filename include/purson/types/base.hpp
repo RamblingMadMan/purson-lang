@@ -29,8 +29,8 @@ namespace purson{
 		virtual const type *param_type(std::size_t idx) const noexcept = 0;
 	};
 	
-	//! base for void types (probably the only)
-	struct void_type: virtual type{};
+	//! base for unit types (probably only one)
+	struct unit_type: virtual type{};
 
 	//! base for boolean types
 	struct boolean_type: arithmetic_type{};

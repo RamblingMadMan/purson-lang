@@ -1,7 +1,9 @@
+#include "fmt/format.h"
+
 #include "../parser.hpp"
 
 namespace purson{
-	std::shared_ptr<rvalue_expr> parse_fn(const token &fn, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_fn(const token &fn, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		if(it == end)
 			throw parser_error{fn.loc(), "unexpected end of tokens after function keyword"};
 		else if(delim_fn(*it))
@@ -96,12 +98,12 @@ namespace purson{
 		}
 		
 		if(it->str() == "->"){
-			// return value axiom
+			// return type
 			++it;
 			if(it == end)
-				throw parser_error{fn.loc(), "unexpected end of tokens after return value axiom operator"};
+				throw parser_error{fn.loc(), "unexpected end of tokens after return type operator"};
 			else if((it->type() != token_type::id) || !(ret_ty = scope.get_type(it->str())))
-				throw parser_error{it->loc(), "expected axiom after return value axiom operator"};
+				throw parser_error{it->loc(), "expected type after return type operator"};
 			
 			++it;
 			if(it == end)
@@ -121,26 +123,27 @@ namespace purson{
 		
 		if(delim_fn(*it)){
 			// simple declaration
-			return std::make_shared<fn_decl_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_info);
+			auto decl = std::make_shared<const fn_decl_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_info);
+			scope.add_fn(fn_name->str(), {}, decl);
+			return decl;
 		}
 		
 		parser_scope fn_scope(scope);
 		
 		auto param_decls = [&params, &param_info, &param_types](){
-			std::vector<std::shared_ptr<lvalue_expr>> decls;
+			std::vector<std::shared_ptr<const lvalue_expr>> decls;
 			decls.reserve(params.size());
 			for(std::size_t i = 0; i < params.size(); i++)
-				decls.emplace_back(std::make_shared<var_decl_expr>(param_info[i].first, param_types[i]));
+				decls.emplace_back(std::make_shared<const var_decl_expr>(param_info[i].first, param_types[i]));
 			
 			return decls;
 		};
 		
+		auto decls = param_decls();
+		for(auto &&decl : decls)
+			fn_scope.set_var(decl->name(), std::move(decl));
+		
 		if(it->str() == "=>"){
-			// expression as return statement
-			auto decls = param_decls();
-			for(auto &&decl : decls)
-				fn_scope.set_var(decl->name(), std::move(decl));
-			
 			++it;
 			auto val_it = it;
 			auto ret_val = parse_value(delim_fn, it, end, fn_scope);
@@ -149,6 +152,7 @@ namespace purson{
 			else
 				ret_ty = ret_val->value_type();
 			
+			// expression as return statement
 			std::vector<std::string_view> param_names;
 			std::vector<const type*> param_types;
 			
@@ -160,13 +164,29 @@ namespace purson{
 				param_types.push_back(param.second);
 			}
 			
-			auto decl = std::make_shared<fn_decl_expr>(fn_name ? fn_name->str() : "", fn_scope.typeset()->function(ret_ty, param_types), param_info);
-			auto ret = std::make_shared<return_expr>(std::move(ret_val));
-			return std::make_shared<fn_def_expr>(std::move(decl), std::move(ret));
+			auto decl = std::make_shared<const fn_decl_expr>(fn_name ? fn_name->str() : "", fn_scope.typeset()->function(ret_ty, param_types), param_info);
+			auto ret = std::make_shared<const return_expr>(std::move(ret_val));
+			scope.add_fn(fn_name->str(), {}, decl);
+			return std::make_shared<const fn_def_expr>(std::move(decl), std::move(ret));
 		}
 		else if(it->str() == "{"){
-			// complex/imperative function body
-			throw parser_error{it->loc(), "imperative function style is not implemented yet"};
+			++it;
+			auto block_delim = [](const token &tok){ return (tok.type() == token_type::end) || (tok.str() == "}"); };
+			std::vector<std::shared_ptr<const rvalue_expr>> exprs;
+			while(it->str() != "}"){
+				auto expr_ = parse_inner(std::move(block_delim), it, end, fn_scope);
+				if(expr_) exprs.emplace_back(std::move(expr_));
+				if(it->str() == "}")
+					break;
+				else
+					++it;
+			}
+			
+			auto decl = std::make_shared<const fn_decl_expr>(fn_name ? fn_name->str() : "", fn_scope.typeset()->function(ret_ty, param_types), param_info);
+			auto block_expr_ = std::make_shared<const block_expr>(std::move(exprs), ret_ty);
+			auto def = std::make_shared<const fn_def_expr>(std::move(decl), std::move(block_expr_));
+			scope.add_fn(fn_name->str(), {}, def);
+			return def;
 		}
 		else if(it->str() == "="){
 			// function alias
@@ -176,7 +196,7 @@ namespace purson{
 				throw parser_error{it->loc(), "can not create an unnamed function alias"};
 		}
 		else
-			throw parser_error{fn.loc(), "unexpected expression after function declaration"};
+			throw parser_error{fn.loc(), fmt::format("unexpected expression '{}' after function declaration", it->str())};
 		
 		throw parser_error{fn.loc(), "unreachable error. how the hell'd ya get here big boi?"};
 	}
