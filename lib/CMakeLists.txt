@@ -49,3 +49,9 @@ add_library(purson ${PURSON_HEADERS} ${PURSON_SOURCES})
 #target_compile_definitions(purson PRIVATE ${LLVM_CXXFLAGS})
 target_include_directories(purson PRIVATE ${GMP_INCLUDE_DIRS} ${MPFR_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
 target_link_libraries(purson fmt ICU::ICU ${GMP_LIBRARIES} ${MPFR_LIBRARIES} ${LLVM_LIBRARIES})
+
+install(
+	TARGETS purson
+	CONFIGURATIONS Release
+	ARCHIVE DESTINATION lib
+)

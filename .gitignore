@@ -1,6 +1,5 @@
 # build environment related files/dirs
 build
-cmake
 cmake-build-debug
 .idea
 .kdev4

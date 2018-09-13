@@ -8,3 +8,9 @@ set(
 add_executable(purson-comp ${PURSON_COMP_SOURCES})
 
 target_link_libraries(purson-comp purson fmt Boost::filesystem)
+
+install(
+	TARGETS purson-comp
+	CONFIGURATIONS Release
+	RUNTIME DESTINATION bin
+)

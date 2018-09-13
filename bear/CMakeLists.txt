@@ -18,3 +18,9 @@ set(
 add_executable(bear qml.qrc monoidFont.qrc ${BEAR_SOURCES})
 
 target_link_libraries(bear Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::QuickControls2 stdc++fs purson Qt5::Widgets)
+
+install(
+	TARGETS bear
+	CONFIGURATIONS Release
+	RUNTIME DESTINATION bin
+)
