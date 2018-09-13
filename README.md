@@ -1,8 +1,6 @@
 ![Purson 
 Logo](https://image.ibb.co/ng9iGo/purson_Lion_Red_Very_Small.png)
 
-[![Build Status](https://travis-ci.com/RamblingMadMan/purson-lang.svg?branch=master)](https://travis-ci.com/RamblingMadMan/purson-lang)
-
 # Purson
 Strongly typed, functional, general purpose programming language.
 
@@ -31,7 +29,9 @@ fn main() => io.output("Hello, " + io.input() + "!");
 ## Components
 
 ### Bear
-A simple IDE for Purson projects.
+Highly unfinished IDE for Purson projects.
+
+![Bear Screenshot](https://image.ibb.co/bwPwvU/bear_Early.png)
 
 #### Features
 
