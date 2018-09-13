@@ -4,32 +4,21 @@ Logo](https://image.ibb.co/ng9iGo/purson_Lion_Red_Very_Small.png)
 [![Build Status](https://travis-ci.com/RamblingMadMan/purson-lang.svg?branch=master)](https://travis-ci.com/RamblingMadMan/purson-lang)
 
 # Purson
-Strongly typed functional general purpose programming language.
+Strongly typed, functional, general purpose programming language.
 
 ## Brief
-Purson was created out of interest and curiosity rather than a need and as such 
-features are added on a very loose schedule. All development is done in a 
-rolling release fashion, releases are snapshots of development.
+Purson was created out of interest and curiosity rather than a need; and as such 
+features are added on a very irregular basis. All development is done on a loose
+rolling release schedule.
 
-The language is designed to be quick to write, beautiful to look at and easy to do right.
+The language is designed to be quick to write, beautiful to look at and easy to understand.
 
-As an example here are a couple of function definitions:
+Here is a variation of the classic Hello World example:
 
 ```
-fn pow(x, n) => x * pow(x, n-1);
-fn pow(x, 1) => x;
-fn pow(x, 0) => 1;
+let io = import("io");
 
-fn fib(a) => fib(a-1) + fib(a-2);
-fn fib(1) => 1;
-fn fib(0) => 0;
-
-type Int => Integer;
-
-fn main(){
-    var intTy = Int;
-    fn powi = pow: intTy -> Int -> Integer;
-}
+fn main() => io.output("Hello, " + io.input() + "!");
 ```
 
 ## Language Features
@@ -37,14 +26,23 @@ fn main(){
 - Type inference
 - Pattern matching
 - Automatic differentiation
-- Dynamic code generation (self-modification)
+- Dynamic code generation
 
 ## Components
+
+### Bear
+A simple IDE for Purson projects.
+
+#### Features
+
+- [X] Syntax Highlighting 
+- [X] File loading/saving
+- [ ] Project handling
 
 ### Purson Library
 This library contains functions for lexing, parsing and compiling Purson code as well as utilities to interface with programs written in purson.
 
-Here is a list of completed library features:
+#### Features
 
 - [X] Lexer
 - [X] Parser
@@ -70,13 +68,17 @@ Then the value result of the expression is printed.
 
 A few dependencies are required to build/run the Purson components.
 
-### Libraries
+### Required Libraries
 
 * GMP
 * MPFR
 * ICU
 * Readline
 * LLVM
+
+### Additional Bear Libraries
+
+* Qt 5
 
 ## Building
 
