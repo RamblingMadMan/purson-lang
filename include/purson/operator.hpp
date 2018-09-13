@@ -19,6 +19,8 @@ namespace purson{
 		dot, comma,
 		add, sub, mul, div, mod, pow,
 		equ, neq, lt, gt, lte, gte,
+		and_, nand_,
+		or_, nor_,
 		inc, dec,
 		set,
 		ret, type, ret_type
@@ -28,17 +30,23 @@ namespace purson{
 		#define EXPAND(x) x
 		#define PRECEDENCE_BASE EXPAND(__COUNTER__)
 		switch(binop){
-			case operator_type::dot: return __COUNTER__ - PRECEDENCE_BASE;
 			case operator_type::comma: return __COUNTER__ - PRECEDENCE_BASE;
-			
-			case operator_type::pow: return __COUNTER__ - PRECEDENCE_BASE;
-			
-			case operator_type::div:
-			case operator_type::mul: return __COUNTER__ - PRECEDENCE_BASE;
 			
 			case operator_type::add:
 			case operator_type::sub: return __COUNTER__ - PRECEDENCE_BASE;
-			
+
+			case operator_type::div:
+			case operator_type::mul: return __COUNTER__ - PRECEDENCE_BASE;
+
+			case operator_type::pow: return __COUNTER__ - PRECEDENCE_BASE;
+
+			case operator_type::dot: return __COUNTER__ - PRECEDENCE_BASE;
+
+			case operator_type::and_:
+			case operator_type::nand_:
+			case operator_type::or_:
+			case operator_type::nor_: return __COUNTER__ - PRECEDENCE_BASE;
+
 			default: throw operator_error{"invalid binary operator"};
 		}
 		#undef PRECEDENCE_BASE
@@ -60,6 +68,8 @@ namespace purson{
 				case '=': return operator_type::set;
 				case '>': return operator_type::gt;
 				case '<': return operator_type::lt;
+				case '|': return operator_type::or_;
+				case '&': return operator_type::and_;
 				default: return std::nullopt;
 			}
 		}

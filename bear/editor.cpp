@@ -9,6 +9,7 @@ BearHighlighter::BearHighlighter(QTextDocument *parent)
 	: QSyntaxHighlighter(parent){
 	regularFormat.setForeground(QColor(222, 222, 222, 255));
 	kwFormat.setForeground(QColor(226, 112, 255, 255));
+	opFormat.setForeground(QColor(137, 182, 255, 255));
 	commentFormat.setForeground(Qt::green);
 	stringFormat.setForeground(Qt::yellow);
 	numFormat.setForeground(QColor(255, 246, 81, 255));
@@ -23,6 +24,11 @@ void BearHighlighter::highlightBlock(const QString &text){
 			switch(tok.type()){
 				case purson::token_type::keyword:{
 					format = &kwFormat;
+					break;
+				}
+
+				case purson::token_type::op:{
+					format = &opFormat;
 					break;
 				}
 

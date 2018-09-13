@@ -1,0 +1,5 @@
+type Counting = Natural & NotZero;
+
+fn fib(x: Counting) => fib(x - 1) + fib(x - 2);
+fn fib(1) => 1;
+fn fib(2) => 1;

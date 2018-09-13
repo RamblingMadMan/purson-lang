@@ -18,31 +18,19 @@ ApplicationWindow {
 	Material.primary: Material.Brown
 	Material.accent: Material.Black
 
-	Loader {
-		id: projectLoader
-		objectName: "editorBox"
-		visible: false
-
-		anchors.fill: parent
-		onLoaded: {
-
-		}
+	ProjectWindow {
+		id: project
+		fileDialog: openDialog
 	}
 
 	FileDialog {
-		id: fileDialog
+		id: openDialog
 
 		title: "Choose a project directory"
 		folder: shortcuts.home
 
 		onAccepted: {
-			projectLoader.source = "qml/ProjectWindow.qml"
-			projectLoader.item.projectHandler.dirUrl = folder
-			projectLoader.visible = true
-		}
-
-		onRejected: {
-			Qt.quit();
+			project.projectHandler.openProject(openDialog.folder)
 		}
 
 		Component.onCompleted: visible = true

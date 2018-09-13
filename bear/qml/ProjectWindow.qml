@@ -11,16 +11,8 @@ Page {
 
 	anchors.fill: parent
 
+	property FileDialog fileDialog
 	property alias projectHandler: project
-
-	FileDialog {
-		id: fileDialog
-
-		title: "Choose a project directory"
-		folder: shortcuts.home
-
-		onAccepted: project.openProject(fileDialog.folder)
-	}
 
 	Action {
 		id: openaction

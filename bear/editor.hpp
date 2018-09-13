@@ -26,7 +26,7 @@ class BearHighlighter: public QSyntaxHighlighter{
 		void highlightBlock(const QString &text) override;
 
 	private:
-		QTextCharFormat regularFormat, kwFormat, commentFormat, stringFormat, numFormat;
+		QTextCharFormat regularFormat, kwFormat, opFormat, commentFormat, stringFormat, numFormat;
 };
 
 class BearEditor: public QWidget{
