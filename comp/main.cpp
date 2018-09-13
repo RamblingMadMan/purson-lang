@@ -1,7 +1,6 @@
 #include <vector>
 #include <fstream>
-
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include "fmt/format.h"
 
@@ -61,6 +60,8 @@ int main(int argc, char *argv[]){
 	auto unit_ty = types->unit();
 	auto int32_ty = types->integer(32);
 
+	auto fn_ty = types->function(unit_ty, {int32_ty});
+
 	auto main_fn_name = purson::mangle_fn_name("main", unit_ty, {});
 
 	modules->set_fn_ptr("f1i32u0println", reinterpret_cast<void*>(f1i32u0println));
@@ -68,7 +69,7 @@ int main(int argc, char *argv[]){
 	std::vector<purson::jit_module*> jit_modules;
 	jit_modules.reserve(input_files.size());
 
-	namespace fs = boost::filesystem;
+	namespace fs = std::filesystem;
 
 	for(std::size_t i = 0; i < input_files.size(); i++){
 		fs::path p(input_files[i]);
@@ -86,7 +87,7 @@ int main(int argc, char *argv[]){
 		auto exps = purson::parse(revision, toks);
 
 		auto &&module = jit_modules.emplace_back(modules->create_module(input_files[i]));
-		module->register_func("f1i32u0println", reinterpret_cast<void*>(f1i32u0println), unit_ty, {int32_ty});
+		module->register_func("f1i32u0println", reinterpret_cast<void*>(f1i32u0println), fn_ty);
 		module->compile(exps);
 		//module->write(output_file);
 	}

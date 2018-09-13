@@ -31,6 +31,8 @@ fn main() => io.output("Hello, " + io.input() + "!");
 ### Bear
 Highly unfinished IDE for Purson projects.
 
+To test, when it opens up point it to the "purson/testing/Main" directory.
+
 ![Bear Screenshot](https://image.ibb.co/bwPwvU/bear_Early.png)
 
 #### Features

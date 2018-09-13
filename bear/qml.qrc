@@ -5,5 +5,7 @@
 	</qresource>
 	<qresource prefix="/qml">
 		<file alias="BearEditor.qml">qml/BearEditor.qml</file>
+		<file alias="ProjectWindow.qml">qml/ProjectWindow.qml</file>
+		<file alias="ProjectSelector.qml">qml/ProjectSelector.qml</file>
 	</qresource>
 </RCC>

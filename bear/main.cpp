@@ -41,69 +41,79 @@ int main(int argc, char *argv[]){
 	QQmlComponent component(&engine, "ListElement");
 
 	QObject *root = engine.rootObjects().at(0);
-	QObject *textEdit = root->findChild<QObject*>(QStringLiteral("textEdit"));
-	QObject *lineNumbers = root->findChild<QObject*>(QStringLiteral("lineNumbers"));
 
-	auto documentHandler = root->findChild<BearDocumentHandler*>(QStringLiteral("document"));
-	auto project = root->findChild<BearProjectHandler*>(QStringLiteral("project"));
-	auto sources = root->findChild<QObject*>(QStringLiteral("sourceList"));
-	auto moduleHeader = root->findChild<QObject*>(QStringLiteral("moduleHeader"));
+	auto editorBox = root->findChild<QQuickItem*>(QStringLiteral("editorBox"));
 
-	QQuickTextDocument *quickTextDocument = textEdit->property("textDocument").value<QQuickTextDocument*>();
-	QTextDocument *document = quickTextDocument->textDocument();
-
-	project->connect(
-		project,
-		&BearProjectHandler::dirUrlChanged,
-		sources,
+	editorBox->connect(
+		editorBox,
+		&QQuickItem::visibleChanged,
+		editorBox,
 		[&](){
-			fmt::print(stderr, "Project\n\tname: {}\n", project->project()->name());
+			QObject *textEdit = root->findChild<QObject*>(QStringLiteral("textEdit"));
+			QObject *lineNumbers = root->findChild<QObject*>(QStringLiteral("lineNumbers"));
 
-			moduleHeader->setProperty("text", QString::fromStdString(project->project()->name()));
+			auto documentHandler = root->findChild<BearDocumentHandler*>(QStringLiteral("document"));
+			auto project = root->findChild<BearProjectHandler*>(QStringLiteral("project"));
+			auto sources = root->findChild<QObject*>(QStringLiteral("sourceList"));
+			auto moduleHeader = root->findChild<QObject*>(QStringLiteral("moduleHeader"));
 
-			QStringList modulePaths;
+			QQuickTextDocument *quickTextDocument = textEdit->property("textDocument").value<QQuickTextDocument *>();
+			QTextDocument *document = quickTextDocument->textDocument();
 
-			for(auto &&source : project->project()->modules()[0].sources()){
-				auto dirStr = source.path().filename().string();
-				fmt::print(stderr, "\tmodule: {}\n", source.path().string());
-				modulePaths.push_back(QString::fromStdString(dirStr));
-			}
+			project->connect(
+				project,
+				&BearProjectHandler::dirUrlChanged,
+				sources,
+				[&](){
+					fmt::print(stderr, "Project\n\tname: {}\n", project->project()->name());
 
-			sources->setProperty("model", QVariant::fromValue(modulePaths));
-		}
-	);
+					moduleHeader->setProperty("text", QString::fromStdString(project->project()->name()));
 
-	document->connect(
-		document,
-		&QTextDocument::contentsChanged,
-		lineNumbers,
-		[documentHandler, document, lineNumbers](){
-			if(document->lineCount() != lineNumbers->property("number").value<int>()){
-				QString text = "";
+					QStringList modulePaths;
 
-				for(std::size_t i = 0; i < document->lineCount(); i++){
-					text += QString::fromStdString(fmt::format("{}\n", i + 1));
-					lineNumbers->setProperty("text", text);
+					for(auto &&source : project->project()->modules()[0].sources()){
+						auto dirStr = source.path().filename().string();
+						fmt::print(stderr, "\tmodule: {}\n", source.path().string());
+						modulePaths.push_back(QString::fromStdString(dirStr));
+					}
+
+					sources->setProperty("model", QVariant::fromValue(modulePaths));
 				}
+			);
 
-				lineNumbers->setProperty("number", document->lineCount());
-			}
+			document->connect(
+				document,
+				&QTextDocument::contentsChanged,
+				lineNumbers,
+				[documentHandler, document, lineNumbers](){
+					if(document->lineCount() != lineNumbers->property("number").value<int>()){
+						QString text = "";
 
-			try {
-				auto toks = purson::lex(
-					"dev",
-					documentHandler->fileUrl().toString().toStdString(),
-					document->toPlainText().toStdString()
-				);
+						for(std::size_t i = 0; i < document->lineCount(); i++){
+							text += QString::fromStdString(fmt::format("{}\n", i + 1));
+							lineNumbers->setProperty("text", text);
+						}
 
-				auto exprs = purson::parse("dev", toks);
-			}
-			catch(...){
-			}
+						lineNumbers->setProperty("number", document->lineCount());
+					}
+
+					try{
+						auto toks = purson::lex(
+							"dev",
+							documentHandler->fileUrl().toString().toStdString(),
+							document->toPlainText().toStdString()
+						);
+
+						auto exprs = purson::parse("dev", toks);
+					}
+					catch(...){
+					}
+				}
+			);
+
+			project->openProject(QUrl("file:Main"));
 		}
 	);
-
-	project->openProject(QUrl("file:Main"));
 
 	return app.exec();
 
