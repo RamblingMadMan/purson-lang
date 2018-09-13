@@ -29,6 +29,20 @@ namespace purson{
 			virtual std::string_view name() const noexcept = 0;
 			virtual bool is_mutable() const noexcept = 0;
 	};
+
+	//! an unresolved reference
+	class unresolved_identifier_expr: public lvalue_expr{
+		public:
+			unresolved_identifier_expr(const std::string &id_): m_id(id_){}
+
+			std::string_view name() const noexcept override{ return m_id; }
+			bool is_mutable() const noexcept override{ return false; }
+
+			const type *value_type() const noexcept override{ return nullptr; }
+
+		private:
+			std::string m_id;
+	};
 }
 
 #endif // !PURSON_EXPRESSIONS_BASE_HPP

@@ -1,0 +1,13 @@
+type Value = class(Ret){
+	fn get(...) -> Ret;
+};
+
+fn calc(expr e) => data: Value(~e){
+	var m_e = e;
+	fn get(...) => e(...);
+};
+
+fn main(){
+	fn findA(expr e) => e->get($a$);
+	var b = findA($9 = 5 + a$);
+}

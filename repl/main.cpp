@@ -39,7 +39,7 @@ int main(int argc, char *argv[]){
 
 	auto repl_ret_ty = types->unit();
 
-	auto repl_mangled_name = purson::mangle_fn_name("repl", repl_ret_ty, {});
+	auto repl_mangled_name = purson::mangle_fn_name("__repl__", purson::get_type<void>(types), {});
 	
 	fmt::print("Purson REPL\n");
 	
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]){
 	
 	rl_bind_key('\t', rl_complete);
 	
-	std::string src = "fn repl() -> Unit{\n";
+	std::string src = "export fn __repl__() -> Unit{\n";
 	
 	purson::jit_module *module = nullptr;
 
@@ -71,9 +71,8 @@ int main(int argc, char *argv[]){
 			input_str = fmt::format("{};", input_str_v);
 		else
 			input_str = input_str_v;
-		
-		src += input_str;
-		auto final_src = fmt::format("{}\n{}", src, '}');
+
+		auto final_src = fmt::format("{}{}\n{}", src, input_str, '}');
 		
 		try{
 			modules->destroy_module(module);
@@ -83,6 +82,9 @@ int main(int argc, char *argv[]){
 			
 			auto exprs = purson::parse_repl(ver, tokens, types);
 			//fmt::print(stderr, "AST done\n");
+			
+			module = modules->create_module("repl", exprs);
+			//fmt::print(stderr, "Module done\n");
 
 			for(auto &&expr : exprs){
 				if(auto fn_ = std::dynamic_pointer_cast<const purson::fn_expr>(expr))
@@ -91,9 +93,6 @@ int main(int argc, char *argv[]){
 					repl_exprs.push_back(expr);
 			}
 			
-			module = modules->create_module("repl", exprs);
-			//fmt::print(stderr, "Module done\n");
-			
 			auto repl_fn_vptr = modules->get_fn_ptr(repl_mangled_name);
 			if(!repl_fn_vptr)
 				throw std::runtime_error{fmt::format("couldn't find {} in the moduleset", repl_mangled_name)};
@@ -101,6 +100,8 @@ int main(int argc, char *argv[]){
 			reinterpret_cast<repl_fn_t>(repl_fn_vptr)();
 
 			fmt::print("{} {}\n", exprs.size(), exprs.size() > 1 ? "expressions" : "expression");
+
+			src += input_str;
 		}
 		catch(const purson::lexer_error &err){
 			print_error_squigglies(err.location());

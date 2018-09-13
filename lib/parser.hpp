@@ -36,7 +36,7 @@ namespace purson{
 				m_type_map[name] = ty;
 			}
 			
-			std::shared_ptr<const lvalue_expr> get_var(std::string_view name) const noexcept{
+			std::shared_ptr<const var_decl_expr> get_var(std::string_view name) const noexcept{
 				if(auto res = m_vars.find(name); res != end(m_vars))
 					return res->second;
 				else if(m_parent)
@@ -45,7 +45,7 @@ namespace purson{
 					return nullptr;
 			}
 			
-			void set_var(std::string_view name, std::shared_ptr<const lvalue_expr> var){
+			void set_var(std::string_view name, std::shared_ptr<const var_decl_expr> var){
 				m_vars[name] = var;
 			}
 			
@@ -77,7 +77,7 @@ namespace purson{
 			
 			std::map<std::string_view, const type*> m_type_map;
 			std::map<std::string_view, std::map<std::vector<const type*>, std::shared_ptr<const fn_expr>>> m_fns;
-			std::map<std::string_view, std::shared_ptr<const lvalue_expr>> m_vars;
+			std::map<std::string_view, std::shared_ptr<const var_decl_expr>> m_vars;
 	};
 	
 	using token_iterator_t = typename std::vector<token>::const_iterator;
@@ -98,8 +98,9 @@ namespace purson{
 	std::shared_ptr<const rvalue_expr> parse_keyword(const token &kw, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	
 	std::shared_ptr<const rvalue_expr> parse_id(const token &id, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
-	std::shared_ptr<const rvalue_expr> parse_fn(const token &fn, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
+	std::shared_ptr<const rvalue_expr> parse_fn(const token &fn, fn_visibility visibility, fn_linkage linkage, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	std::shared_ptr<const lvalue_expr> parse_var(const token &var, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
+	std::shared_ptr<const lvalue_expr> parse_type(const token &type, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 	std::shared_ptr<const rvalue_expr> parse_match(const token &match, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope);
 }
 

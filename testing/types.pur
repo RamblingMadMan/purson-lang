@@ -1,0 +1,18 @@
+type Yes;
+type No;
+type Answer = Yes | No;
+
+isGood val => val ? Yes : No;
+
+f(a, b) => a then b;
+
+main(){
+    e = ?y (2 x)?;
+
+    f(x, y) => e(?x=? . x . ?; y=? . y);
+
+    a = 1.0;
+    b = 2.0;
+    f(?a * b?, ?a + b?); // Compiles
+    f(?a + b?, ?a * b?);
+}

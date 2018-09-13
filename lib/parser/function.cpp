@@ -3,7 +3,13 @@
 #include "../parser.hpp"
 
 namespace purson{
-	std::shared_ptr<const rvalue_expr> parse_fn(const token &fn, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+	std::shared_ptr<const rvalue_expr> parse_fn(
+		const token &fn,
+		fn_visibility visibility, fn_linkage linkage,
+		delim_fn_t delim_fn,
+		token_iterator_t &it, token_iterator_t end,
+		parser_scope &scope
+	){
 		if(it == end)
 			throw parser_error{fn.loc(), "unexpected end of tokens after function keyword"};
 		else if(delim_fn(*it))
@@ -47,11 +53,9 @@ namespace purson{
 					else if(
 						(it->type() == token_type::integer) ||
 						(it->type() == token_type::real) ||
-						(it->type() == token_type::string) ||
-						(it->type() == token_type::ch)
-					){
+						(it->type() == token_type::string)
+					)
 						throw parser_error{it->loc(), "pattern matching isn't implemented yet :^("};
-					}
 					
 					if(!param_name)
 						throw parser_error{it->loc(), "expected parameter name"};
@@ -123,33 +127,39 @@ namespace purson{
 		
 		if(delim_fn(*it)){
 			// simple declaration
-			auto decl = std::make_shared<const fn_decl_expr>(fn_name ? fn_name->str() : "", scope.typeset()->function(ret_ty, param_types), param_info);
-			scope.add_fn(fn_name->str(), {}, decl);
+			auto decl = std::make_shared<const fn_decl_expr>(
+				fn_name ? fn_name->str() : "",
+				scope.typeset()->function(ret_ty, param_types),
+				param_info,
+				visibility,
+				linkage
+			);
+
+			scope.add_fn(decl->name(), {}, decl);
 			return decl;
 		}
 		
 		parser_scope fn_scope(scope);
-		
-		auto param_decls = [&params, &param_info, &param_types](){
-			std::vector<std::shared_ptr<const lvalue_expr>> decls;
-			decls.reserve(params.size());
-			for(std::size_t i = 0; i < params.size(); i++)
-				decls.emplace_back(std::make_shared<const var_decl_expr>(param_info[i].first, param_types[i]));
-			
-			return decls;
-		};
-		
-		auto decls = param_decls();
-		for(auto &&decl : decls)
-			fn_scope.set_var(decl->name(), std::move(decl));
+
+		std::vector<std::shared_ptr<const lvalue_expr>> decls;
+		decls.reserve(params.size());
+
+		for(std::size_t i = 0; i < params.size(); i++){
+			auto var = std::make_shared<const var_decl_expr>(param_info[i].first, param_types[i]);
+			auto &&d = decls.emplace_back(var);
+			fn_scope.set_var(d->name(), std::move(var));
+		}
 		
 		if(it->str() == "=>"){
+			if(visibility == fn_visibility::imported)
+				throw parser_error{it->loc(), "can not define an imported function"};
+
 			++it;
 			auto val_it = it;
 			auto ret_val = parse_value(delim_fn, it, end, fn_scope);
 			if(ret_ty && (ret_val->value_type() != ret_ty))
 				throw parser_error{val_it->loc(), "return value has type different to specified return type"};
-			else
+			else if(!ret_ty)
 				ret_ty = ret_val->value_type();
 			
 			// expression as return statement
@@ -164,12 +174,24 @@ namespace purson{
 				param_types.push_back(param.second);
 			}
 			
-			auto decl = std::make_shared<const fn_decl_expr>(fn_name ? fn_name->str() : "", fn_scope.typeset()->function(ret_ty, param_types), param_info);
+			auto decl = std::make_shared<const fn_decl_expr>(
+				fn_name ? fn_name->str() : "",
+				fn_scope.typeset()->function(ret_ty, param_types),
+				param_info,
+				visibility,
+				linkage
+			);
+
 			auto ret = std::make_shared<const return_expr>(std::move(ret_val));
 			scope.add_fn(fn_name->str(), {}, decl);
 			return std::make_shared<const fn_def_expr>(std::move(decl), std::move(ret));
 		}
 		else if(it->str() == "{"){
+			if(visibility == fn_visibility::imported)
+				throw parser_error{it->loc(), "can not define an imported function"};
+
+			if(!ret_ty) ret_ty = scope.typeset()->unit();
+
 			++it;
 			auto block_delim = [](const token &tok){ return (tok.type() == token_type::end) || (tok.str() == "}"); };
 			std::vector<std::shared_ptr<const rvalue_expr>> exprs;
@@ -182,7 +204,13 @@ namespace purson{
 					++it;
 			}
 			
-			auto decl = std::make_shared<const fn_decl_expr>(fn_name ? fn_name->str() : "", fn_scope.typeset()->function(ret_ty, param_types), param_info);
+			auto decl = std::make_shared<const fn_decl_expr>(
+				fn_name ? fn_name->str() : "",
+				fn_scope.typeset()->function(ret_ty, param_types),
+				param_info,
+				visibility,
+				linkage
+			);
 			auto block_expr_ = std::make_shared<const block_expr>(std::move(exprs), ret_ty);
 			auto def = std::make_shared<const fn_def_expr>(std::move(decl), std::move(block_expr_));
 			scope.add_fn(fn_name->str(), {}, def);

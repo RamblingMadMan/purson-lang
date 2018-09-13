@@ -9,9 +9,63 @@
 #include "base.hpp"
 #include "../types.hpp"
 
+#include "utf8.h"
+
 namespace purson{
 	//! base for all literal expressions
 	class literal_expr: public rvalue_expr{};
+
+	class string_literal_expr: public literal_expr{
+		public:
+			string_literal_expr(std::string_view lit, const typeset *types){
+				auto it = begin(lit);
+				auto end_ = end(lit);
+
+				auto cp = utf8::next(it, end_);
+
+				if(cp != '"')
+					throw expr_error{"invalid string literal"};
+
+				while(it != end_){
+					cp = utf8::next(it, end_);
+					if(cp == '\\'){
+						cp = utf8::next(it, end_);
+
+						char c;
+
+						switch(cp){
+							case 'n': c = '\n'; break;
+							case 'r': c = '\r'; break;
+							case '"': c = '"'; break;
+							case '\'': c = '\''; break;
+
+							default:
+								throw expr_error{"invalid string escape character"};
+						}
+
+						m_str += c;
+					}
+					else if(cp == '"'){
+						if(it != end_)
+							throw expr_error{"string literal has unescaped quote mark"};
+
+						break;
+					}
+					else
+						utf8::append(cp, std::back_inserter(m_str));
+				}
+
+				m_type = types->string(char_encoding::utf8);
+			}
+
+			std::string_view str() const noexcept override{ return m_str; }
+
+			const string_type *value_type() const noexcept override{ return m_type; };
+
+		private:
+			std::string m_str;
+			const string_type *m_type;
+	};
 	
 	//! base for all numeric literal expressions
 	class numeric_literal_expr: public literal_expr{

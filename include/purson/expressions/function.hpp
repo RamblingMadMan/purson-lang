@@ -35,8 +35,8 @@ namespace purson{
 	
 	class fn_call_expr: public rvalue_expr{
 		public:
-			fn_call_expr(std::shared_ptr<const fn_expr> fn_, const std::vector<std::shared_ptr<const rvalue_expr>> &args)
-				: m_fn(std::move(fn_)), m_args(args){}
+			fn_call_expr(std::shared_ptr<const fn_expr> fn_, const std::vector<std::shared_ptr<const rvalue_expr>> &args_)
+				: m_fn(std::move(fn_)), m_args(args_){}
 			
 			const std::shared_ptr<const fn_expr> &fn() const noexcept{ return m_fn; }
 			const std::vector<std::shared_ptr<const rvalue_expr>> &args() const noexcept{ return m_args; }
@@ -77,22 +77,39 @@ namespace purson{
 			std::vector<std::shared_ptr<const rvalue_expr>> m_exprs;
 			const type *m_ret_ty;
 	};
+
+	enum class fn_visibility{
+		exported, imported, local
+	};
+
+	enum class fn_linkage{
+		C, purson
+	};
 	
 	class fn_decl_expr: public fn_expr{
 		public:
-			fn_decl_expr(std::string_view name_, const function_type *fn_type_, std::vector<std::pair<std::string_view, const type*>> params_)
-				: m_name{name_}, m_fn_type{fn_type_}, m_params{std::move(params_)}{}
+			fn_decl_expr(
+				std::string_view name_,
+				const function_type *fn_type_, std::vector<std::pair<std::string_view, const type*>> params_,
+				fn_visibility visibility_ = fn_visibility::local,
+				fn_linkage linkage_ = fn_linkage::purson
+			)
+				: m_name{name_}, m_fn_type{fn_type_}, m_params{std::move(params_)}, m_visibility{visibility_}, m_linkage{linkage_}{}
 			
 			const function_type *value_type() const noexcept override{ return m_fn_type; }
 			
 			std::string_view name() const noexcept override{ return m_name; }
 			const type *return_type() const noexcept override{ return m_fn_type->return_type(); }
 			const std::vector<std::pair<std::string_view, const type*>> &params() const noexcept override{ return m_params; }
-			
+			fn_visibility visibility() const noexcept{ return m_visibility; }
+			fn_linkage linkage() const noexcept{ return m_linkage; }
+
 		private:
 			std::string_view m_name;
 			const function_type *m_fn_type;
 			std::vector<std::pair<std::string_view, const type*>> m_params;
+			fn_visibility m_visibility;
+			fn_linkage m_linkage;
 	};
 	
 	class fn_def_expr: public fn_expr{
@@ -107,6 +124,8 @@ namespace purson{
 			std::string_view name() const noexcept override{ return m_decl->name(); }
 			const type *return_type() const noexcept override{ return m_decl->return_type(); }
 			const std::vector<std::pair<std::string_view, const type*>> &params() const noexcept override{ return m_decl->params(); }
+			fn_visibility visibility() const noexcept{ return m_decl->visibility(); }
+			fn_linkage linkage() const noexcept{ return m_decl->linkage(); }
 			
 			const expr *body() const noexcept{ return m_body.get(); }
 			

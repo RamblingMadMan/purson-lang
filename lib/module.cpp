@@ -1,5 +1,6 @@
 #include <string>
 
+#include "purson/expressions/function.hpp"
 #include "purson/module.hpp"
 
 #include "llvm.hpp"
@@ -42,35 +43,50 @@ namespace purson{
 		}
 	} static dummy;
 	
-	std::string mangle_fn_name(std::string_view name, const type *ret, const std::vector<const type*> params){
+	std::string mangle_fn_name(std::string_view name, const type *ret, const std::vector<const type*> params, fn_linkage linkage){
+		if(linkage == fn_linkage::C) return std::string(name);
+
 		using namespace std::string_literals;
 		auto str = "f"s + std::to_string(params.size());
 		
 		if(!ret)
 			throw type_error{"return type required for mangling"};
-
-		str += ret->str();
 		
 		for(std::size_t i = 0; i < params.size(); i++){
 			auto ty = params[i];
 			if(!ty)
-				throw type_error{"parameter has not type"};
-
-			str += ty->str();
+				str += "_";
+			else
+				str += ty->str();
 		}
-
-		str += name;
 		
-		return str;
+		return fmt::format("{}{}{}", str, ret->str(), name);
 	}
 	
 	class llvm_module: public jit_module{
 		public:
-			llvm_module(std::string_view name)
-				: m_mod(std::make_shared<llvm::Module>(name.data(), llvm_ctx)), m_global_state{m_mod.get()}{}
+			llvm_module(std::string_view name, std::unique_ptr<llvm::TargetMachine> &tm, const llvm::DataLayout &dl)
+				: m_mod(std::make_shared<llvm::Module>(name.data(), llvm_ctx)), m_global_state{m_mod.get()}, m_tm(tm.get()){
+				m_mod->setTargetTriple(tm->getTargetTriple().str());
+				m_mod->setDataLayout(dl);
+			}
 			
 			~llvm_module(){}
-			
+
+			void register_func(const std::string &name, void *fn_ptr, const function_type *fn_ty) override{
+				auto llvm_ret_ty = llvm_type(fn_ty->return_type());
+				std::vector<llvm::Type*> llvm_param_tys(fn_ty->num_params());
+				for(std::size_t i = 0; i < fn_ty->num_params(); i++)
+					llvm_param_tys[i] = llvm_type(fn_ty->param_type(i));
+
+				auto llvm_fn_ty = llvm::FunctionType::get(llvm_ret_ty, llvm_param_tys, false);
+				auto llvm_fn = llvm::Function::Create(
+					llvm_fn_ty, llvm::Function::ExternalLinkage, name, m_mod.get()
+				);
+
+				llvm_fn->setCallingConv(llvm::CallingConv::C);
+			}
+
 			void *get_fn_ptr(std::string_view mangled_name) override{
 				return nullptr;
 			}
@@ -80,17 +96,42 @@ namespace purson{
 				for(auto &&ptr : ast)
 					values.emplace_back(llvm_compile(ptr.get(), &m_global_state));
 			}
-			
+
+			void write(std::string_view path) override{
+				std::string filename(path);
+				std::error_code EC;
+				llvm::raw_fd_ostream dest(filename, EC, llvm::sys::fs::F_None);
+
+				auto cpu = "generic";
+				auto features = "sse sse2";
+
+				if(EC)
+					throw module_error{fmt::format("could not open file: {}", EC.message())};
+
+				llvm::TargetOptions opts;
+				auto RM = llvm::Optional<llvm::Reloc::Model>();
+
+				llvm::legacy::PassManager pass;
+				auto file_type = llvm::TargetMachine::CGFT_ObjectFile;
+
+				if(m_tm->addPassesToEmitFile(pass, dest, file_type))
+					throw module_error{"target machine can't emit object files"};
+
+				pass.run(*m_mod);
+				dest.flush();
+			}
+
 			std::shared_ptr<llvm::Module> module() noexcept{ return m_mod; }
 			
 		private:
 			std::shared_ptr<llvm::Module> m_mod;
 			llvm_state m_global_state;
+			llvm::TargetMachine *m_tm;
 	};
 	
 	class llvm_moduleset: public jit_moduleset{
 		public:
-			llvm_moduleset(): tm(llvm::EngineBuilder().selectTarget()), dl(tm->createDataLayout()),
+			llvm_moduleset(target t_): t(t_), tm(llvm::EngineBuilder().selectTarget()), dl(tm->createDataLayout()),
 			  objectLayer([](){ return std::make_shared<llvm::SectionMemoryManager>(); }),
 			  compileLayer(objectLayer, llvm::orc::SimpleCompiler(*tm)),
 			  optimizeLayer(compileLayer, [this](std::shared_ptr<llvm::Module> m){
@@ -112,43 +153,57 @@ namespace purson{
 				//mod->setDataLayout(m_dl);
 			}
 			
-			~llvm_moduleset(){
-				
+			~llvm_moduleset(){}
+
+			void set_fn_ptr(std::string_view identifier, void *fn_ptr) override{
+				mapLayer.setGlobalMapping(std::string(identifier), llvm::JITTargetAddress(fn_ptr));
 			}
-			
+
 			void *get_fn_ptr(std::string_view mangled_name) override{
 				auto name = std::string(mangled_name);
 				std::string llvmName;
 				llvm::raw_string_ostream str(llvmName);
 				llvm::Mangler::getNameWithPrefix(str, name, dl);
-				auto fn = mapLayer.findSymbol(str.str(), false);
-				auto bits = fn.getAddress().get();
+				llvm::JITSymbol fn = nullptr;
+				for(auto &&mod : m_mod_handles){
+					fn = mapLayer.findSymbolIn(mod, str.str(), false);
+					if(fn) break;
+				}
+				auto bits = fn ? fn.getAddress().get() : 0;
 				return reinterpret_cast<void*>(bits);
 			}
 			
 			jit_module *create_module(std::string_view name, const std::vector<std::shared_ptr<const expr>> &ast) override{
+				if(t != target::auto_)
+					throw module_error{"only automatic target selection currently supported"};
+
+				auto mod = new llvm_module(name, tm, dl);
+
+				mod->compile(ast);
+
+				m_mods.emplace_back(std::unique_ptr<llvm_module>(mod));
+
 				auto resolver = llvm::orc::createLambdaResolver(
-					[&](const std::string &name){
-						if(auto sym = mapLayer.findSymbol(name, false))
-							return sym;
-						return llvm::JITSymbol(nullptr);
-					},
-					[](const std::string &name){
-						if(auto symAddr =
-							llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name)
-							)
-							return llvm::JITSymbol(symAddr, llvm::JITSymbolFlags::Exported);
-						return llvm::JITSymbol(nullptr);
-					}
+						[this](const std::string &name){
+							if(auto sym = mapLayer.findSymbol(name, false))
+								return sym;
+							return llvm::JITSymbol(nullptr);
+						},
+						[](const std::string &name){
+							if(auto symAddr = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name))
+								return llvm::JITSymbol(symAddr, llvm::JITSymbolFlags::Exported);
+							return llvm::JITSymbol(nullptr);
+						}
 				);
-				
-				auto &&mod = m_mods.emplace_back(std::unique_ptr<llvm_module>(static_cast<llvm_module*>(make_jit_module(name, ast).release())));
-				auto &&module_handle = m_mod_handles.emplace_back(cantFail(mapLayer.addModule(static_cast<llvm_module*>(mod.get())->module(), std::move(resolver))));
-				return m_mod_ptrs.emplace_back(mod.get());
+
+				auto &&module_handle = m_mod_handles.emplace_back(cantFail(mapLayer.addModule(mod->module(), std::move(resolver))));
+				return m_mod_ptrs.emplace_back(mod);
 			}
 			
 			bool destroy_module(const module *mod) noexcept override{
-				auto res = std::find_if(begin(m_mods), end(m_mods), [mod](auto &&ptr){ return ptr.get() == mod; });
+				if(!mod) return false;
+
+			    auto res = std::find_if(begin(m_mods), end(m_mods), [mod](auto &&ptr){ return ptr.get() == mod; });
 				if(res == end(m_mods))
 					return false;
 				
@@ -164,8 +219,13 @@ namespace purson{
 			
 			std::size_t num_modules() const noexcept override{ return m_mod_ptrs.size(); }
 			const jit_module *const *modules() const noexcept override{ return m_mod_ptrs.data(); }
-			
+
+			void write(std::string_view path) override{
+			}
+
 		private:
+			target t;
+
 			std::unique_ptr<llvm::TargetMachine> tm;
 			const llvm::DataLayout dl;
 			mutable llvm::orc::RTDyldObjectLinkingLayer objectLayer;
@@ -202,14 +262,8 @@ namespace purson{
 			};
 	};
 	
-	std::unique_ptr<jit_moduleset> make_jit_moduleset(){
-		auto ret = new llvm_moduleset();
+	std::unique_ptr<jit_moduleset> make_jit_moduleset(target t){
+		auto ret = new llvm_moduleset(t);
 		return std::unique_ptr<jit_moduleset>(ret);
-	}
-	
-	std::unique_ptr<jit_module> make_jit_module(std::string_view name, const std::vector<std::shared_ptr<const expr>> &ast){
-		auto ret = new llvm_module(name);
-		if(ast.size()) ret->compile(ast);
-		return std::unique_ptr<jit_module>(ret);
 	}
 }

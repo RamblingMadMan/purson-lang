@@ -1,0 +1,10 @@
+import io;
+
+fn f(x) => x + 1;
+fn g(x) => x^2;
+
+// f_o_g(x) same as f(g(x))
+fn f_o_g = f @ g;
+
+fn main(){
+}

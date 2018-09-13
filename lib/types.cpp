@@ -4,6 +4,7 @@
 
 #include "fmt/format.h"
 
+#include "purson/expressions/type.hpp"
 #include "purson/types.hpp"
 
 namespace purson{
@@ -77,6 +78,25 @@ namespace purson{
 		basic_unit()
 			: basic_type(0, "u"){}
 	};
+
+	struct basic_type_type: basic_type, type_type{
+		basic_type_type()
+			: basic_type(0, "t"){}
+	};
+
+	struct basic_string: basic_type, string_type{
+		basic_string(char_encoding encoding_)
+			: basic_type(8, "s"), m_encoding(encoding_){}
+
+		char_encoding encoding() const noexcept override{ return m_encoding; }
+
+		char_encoding m_encoding;
+	};
+
+	struct basic_boolean: basic_type, boolean_type{
+		basic_boolean(std::size_t bits_)
+			: basic_type(bits_, "b"){}
+	};
 	
 	struct basic_natural: basic_type, natural_type{
 		basic_natural(std::size_t bits_)
@@ -146,7 +166,12 @@ namespace purson{
 						
 						break;
 					}
-					
+
+					case 'T':{
+						if(name == "Type") return type_();
+						break;
+					}
+
 					case 'U':{
 						if(name == "Unit") return unit();
 						break;
@@ -160,6 +185,20 @@ namespace purson{
 			
 			const unit_type *unit() const noexcept override{
 				return &m_unit_type;
+			}
+
+			const type_type *type_() const noexcept override{
+				return &m_type_type;
+			}
+
+			const string_type *string(char_encoding encoding) const noexcept override{
+				switch(encoding){
+					case char_encoding::ascii: return &m_string_types[0];
+					case char_encoding::utf8: return &m_string_types[1];
+					case char_encoding::utf16: return &m_string_types[2];
+					case char_encoding::utf32: return &m_string_types[3];
+					default: return nullptr;
+				}
 			}
 			
 			const natural_type *natural(std::uint32_t bits) const override{
@@ -248,6 +287,11 @@ namespace purson{
 			
 		private:
 			basic_unit m_unit_type;
+			basic_type_type m_type_type;
+
+			basic_string m_string_types[4]{
+				{char_encoding::ascii}, {char_encoding::utf8}, {char_encoding::utf16}, {char_encoding::utf32}
+			};
 			
 			basic_natural m_natural_types[4]{
 				{8}, {16}, {32}, {64}
@@ -272,5 +316,30 @@ namespace purson{
 	
 	const typeset *types(std::string_view ver){
 		return &purson_base_types;
+	}
+
+	struct basic_type_type_base_t{ virtual ~basic_type_type_base_t() = default; };
+
+	template<typename T, typename Enable = void>
+	struct basic_type_t;
+
+	template<typename T>
+	struct basic_type_t<T, std::enable_if_t<std::is_base_of_v<basic_type, T>>>
+		: basic_type_type_base_t{};
+
+	template<typename T>
+	const basic_type_type_base_t *type_type(){
+		static basic_type_t<T> ret;
+		return &ret;
+	}
+
+	const type *solve_type(const type_block_expr *block, const typeset *types){
+		std::vector<const type*> members;
+
+		auto ty = type_type<basic_unit>();
+		for(auto &&expr : block->exprs()){
+
+		}
+		throw type_error{"type axiom solving not currently implemented"};
 	}
 }

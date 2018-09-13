@@ -1,5 +1,6 @@
 # build environment related files/dirs
 build
+cmake
 cmake-build-debug
 .idea
 .kdev4
@@ -7,6 +8,8 @@ doc
 *.kate-swp
 .directory
 purson-lang.kdev4
+CMakeLists.txt.user
+keith
 
 # submodule folders
 fmt

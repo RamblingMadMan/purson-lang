@@ -4,6 +4,7 @@
 
 #include "parser.hpp"
 #include "purson/expressions/var.hpp"
+#include "purson/expressions/type.hpp"
 
 namespace purson{
 	std::shared_ptr<const rvalue_expr> parse_inner(delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
@@ -11,8 +12,7 @@ namespace purson{
 		switch(it->type()){
 			case token_type::integer:
 			case token_type::real:
-			case token_type::string:
-			case token_type::ch:{
+			case token_type::string:{
 				auto &&lit = *it;
 				return parse_literal(lit, delim_fn, ++it, end, scope);
 			}
@@ -39,18 +39,33 @@ namespace purson{
 	
 	std::shared_ptr<const rvalue_expr> parse_value(delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		if(delim_fn(*it)) return nullptr;
+		else if(it == end)
+			throw parser_error{(--it)->loc(), fmt::format("unexpected end of source. expected a value")};
+
 		switch(it->type()){
 			case token_type::integer:
 			case token_type::real:
-			case token_type::string:
-			case token_type::ch:{
+			case token_type::string:{
 				auto &&lit = *it++;
 				return parse_literal(lit, delim_fn, it, end, scope);
 			}
 
 			case token_type ::id:{
 				auto &&id = *it++;
-				return parse_id(id, delim_fn, it, end, scope);
+				if(std::isupper(id.str()[0])){
+					auto ty = scope.get_type(id.str());
+					if(!ty)
+						throw parser_error{id.loc(), fmt::format("no such type '{}'", id.str())};
+
+					auto type_ref = std::make_shared<const type_ref_expr>(std::string(id.str()), ty, scope.typeset()->type_());
+
+					if(delim_fn(*it))
+						return type_ref;
+					else
+						return parse_leading_value(std::move(type_ref), delim_fn, it, end, scope);
+				}
+				else
+					return parse_id(id, delim_fn, it, end, scope);
 			}
 			
 			case token_type::op:{
@@ -63,7 +78,7 @@ namespace purson{
 				if(kw.str() == "match")
 					return parse_match(kw, delim_fn, it, end, scope);
 				else if(kw.str() == "fn")
-					return parse_fn(kw, delim_fn, it, end, scope);
+					return parse_fn(kw, fn_visibility::local, fn_linkage::purson, delim_fn, it, end, scope);
 				else if(kw.str() == "var")
 					return parse_var(kw, delim_fn, it, end, scope);
 				else
@@ -72,6 +87,36 @@ namespace purson{
 			
 			default:
 				throw parser_error{it->loc(), fmt::format("unexpected token '{}' for value expression", it->str())};
+		}
+	}
+
+	std::shared_ptr<const lvalue_expr> parse_type(const token &type, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
+		switch(it->type()){
+			case token_type::id:{
+				if(!std::isupper(it->str()[0]))
+					throw parser_error{it->loc(), "type names must begin with a capital letter"};
+
+				auto ty = scope.get_type(it->str());
+				if(ty)
+					throw parser_error{it->loc(), fmt::format("type with name '{}' already exists", it->str())};
+
+				auto type_name = it;
+
+				++it;
+
+				if(it->str() == "=>"){
+					auto rhs_tok = ++it;
+					auto rhs = parse_value(delim_fn, it, end, scope);
+					auto def = std::make_shared<const type_def_expr>(std::string(it->str()), std::move(rhs), scope.typeset());
+					scope.set_type(type_name->str(), def->defined());
+					return def;
+				}
+				else
+					throw parser_error{it->loc(), fmt::format("expected return operator after type name '{}'", type_name->str())};
+			}
+
+			default:
+				throw parser_error{it->loc(), fmt::format("unexpected token '{}' after type keyword", it->str())};
 		}
 	}
 	
@@ -106,38 +151,42 @@ namespace purson{
 							}
 							else
 								args.push_back(std::move(binop));
-						}
+						} else
+							args.push_back(std::move(args_expr));
 						
 						std::shared_ptr<const fn_expr> best_match;
-						
-						for(auto &&fn : fn_ref->fns()){
-							if(fn->params().size() != args.size())
-								continue;
-							
-							bool good_match = true;
-							bool perfect_match = true;
-							
-							for(std::size_t i = 0; i < fn->params().size(); i++){
-								auto param_ty = fn->params()[i].second;
-								if(param_ty != args[i]->value_type()){
-									if(param_ty){
-										good_match = false;
-										break;
+
+						if(fn_ref->fns().size() != 1){
+							for(auto &&fn : fn_ref->fns()){
+								if(fn->params().size() != args.size())
+									continue;
+
+								bool good_match = true;
+								bool perfect_match = true;
+
+								for(std::size_t i = 0; i < fn->params().size(); i++){
+									auto param_ty = fn->params()[i].second;
+									if(param_ty != args[i]->value_type()){
+										if(param_ty){
+											good_match = false;
+											break;
+										} else
+											perfect_match = false;
 									}
-									else
-										perfect_match = false;
 								}
-							}
-							
-							if(good_match){
-								if(perfect_match){
+
+								if(good_match){
 									best_match = fn;
-									break;
+									if(perfect_match){
+										best_match = fn;
+										break;
+									} else
+										throw parser_error{it->loc(),
+														   "only perfect function calls are currently supported (exact arity and types)"};
 								}
-								else
-									throw parser_error{it->loc(), "only perfect function calls are currently supported (exact arity and types)"};
 							}
-						}
+						} else
+							best_match = fn_ref->fns()[0];
 						
 						if(!best_match)
 							throw parser_error{it->loc(), "no function with that id"};
@@ -162,13 +211,15 @@ namespace purson{
 	
 	std::shared_ptr<const expr> parse_top(token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		switch(it->type()){
+			case token_type::end: return parse_top(++it, end, scope);
+
 			case token_type::keyword:{
 				auto &&kw = *it;
 				return parse_keyword(kw, default_delim, ++it, end, scope);
 			}
 			
 			default:
-				throw parser_error{it->loc(), "unexpected token at top level"};
+				throw parser_error{it->loc(), fmt::format("unexpected token '{}' at top level", it->str())};
 		}
 	}
 	
@@ -200,19 +251,9 @@ namespace purson{
 		
 		if(it == end) throw parser_error{op.loc(), "unexpected end of tokens after operator"};
 		else if(delim_fn(*it)) throw parser_error{op.loc(), "expected value after binary operator"};
-		
-		switch(it->type()){
-			case token_type::integer:
-			case token_type::real:{
-				auto &&lit = *it;
-				auto val = parse_literal(lit, delim_fn, ++it, end, scope);
-				
-				return std::make_shared<const binary_op_expr>(*op_opt, std::move(lhs), std::move(val));
-			}
-			
-			default:
-				throw parser_error{it->loc(), "unexpected token after binary operator"};
-		}
+
+		auto rhs = parse_value(delim_fn, it, end, scope);
+		return std::make_shared<const binary_op_expr>(*op_opt, std::move(lhs), std::move(rhs));
 	}
 	
 	std::shared_ptr<const rvalue_expr> parse_literal(const token &lit, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
@@ -223,6 +264,7 @@ namespace purson{
 		switch(lit.type()){
 			case token_type::integer: ret = std::make_shared<integer_literal_expr>(lit.str(), scope.typeset()); break;
 			case token_type::real: ret = std::make_shared<real_literal_expr>(lit.str(), scope.typeset()); break;
+			case token_type::string: ret = std::make_shared<string_literal_expr>(lit.str(), scope.typeset()); break;
 			default:
 				throw parser_error{it->loc(), "unexpected token for literal"};
 		}
@@ -244,10 +286,11 @@ namespace purson{
 		if(it == end) throw parser_error{id.loc(), "unexpected end of tokens after identifier"};
 		
 		if(auto var = scope.get_var(id.str())){
+			auto ref = std::make_shared<const var_ref_expr>(std::move(var));
 			if(delim_fn(*it))
-				return var;
+				return ref;
 			else
-				return parse_leading_value(std::move(var), delim_fn, it, end, scope);
+				return parse_leading_value(std::move(ref), delim_fn, it, end, scope);
 		}
 		else if(auto fns = scope.get_fn(id.str()); fns.size()){
 			auto ret = std::make_shared<const fn_ref_expr>(std::move(fns));
@@ -292,7 +335,7 @@ namespace purson{
 	std::shared_ptr<const rvalue_expr> parse_keyword(const token &kw, delim_fn_t delim_fn, token_iterator_t &it, token_iterator_t end, parser_scope &scope){
 		switch(kw.str()[0]){
 			case 'f':{
-				if(kw.str() == "fn") return parse_fn(kw, delim_fn, it, end, scope);
+				if(kw.str() == "fn") return parse_fn(kw, fn_visibility::local, fn_linkage::purson, delim_fn, it, end, scope);
 				break;
 			}
 			
@@ -300,9 +343,88 @@ namespace purson{
 				if(kw.str() == "var") return parse_var(kw, delim_fn, it, end, scope);
 				break;
 			}
+
+			case 't':{
+				if(kw.str() == "type") return parse_type(kw, delim_fn, it, end, scope);
+				break;
+			}
 			
 			case 'm':{
 				if(kw.str() == "match") return parse_match(kw, delim_fn, it, end, scope);
+				break;
+			}
+
+			case 'i':{
+				if(kw.str() == "import"){
+					auto visibility = fn_visibility::imported;
+					auto linkage = fn_linkage::purson;
+
+					if(it->str() == "["){
+						++it;
+						if(it->str() == "C"){
+							linkage = fn_linkage::C;
+							++it;
+							if(it->str() != "]")
+								throw parser_error{it->loc(), "expected closing square bracket after linkage specifier"};
+
+							++it;
+						}
+						else if(it->str() == "purson"){
+							linkage = fn_linkage::purson;
+							++it;
+							if(it->str() != "]")
+								throw parser_error{it->loc(), "expected closing square bracket after linkage specifier"};
+
+							++it;
+						}
+						else
+							throw parser_error{it->loc(), "expected linkage specifier"};
+					}
+
+					auto &&fn_kw = *it;
+
+					if(it->str() == "fn")
+						return parse_fn(fn_kw, visibility, linkage, delim_fn, ++it, end, scope);
+					else
+						throw parser_error{it->loc(), fmt::format("expected function declaration after visibility specifier. got '{}'", it->str())};
+				}
+				break;
+			}
+
+			case 'e':{
+				if(kw.str() == "export"){
+					auto visibility = fn_visibility::exported;
+					auto linkage = fn_linkage::purson;
+
+					if(it->str() == "["){
+						++it;
+						if(it->str() == "C"){
+							linkage = fn_linkage::C;
+							++it;
+							if(it->str() != "]")
+								throw parser_error{it->loc(), "expected closing square bracket after linkage specifier"};
+
+							++it;
+						}
+						else if(it->str() == "purson"){
+							linkage = fn_linkage::purson;
+							++it;
+							if(it->str() != "]")
+								throw parser_error{it->loc(), "expected closing square bracket after linkage specifier"};
+
+							++it;
+						}
+						else
+							throw parser_error{it->loc(), "expected linkage specifier"};
+					}
+
+					auto &&fn_kw = *it;
+
+					if(it->str() == "fn")
+						return parse_fn(fn_kw, visibility, linkage, delim_fn, ++it, end, scope);
+					else
+						throw parser_error{it->loc(), fmt::format("expected function declaration after visibility specifier. got '{}'", it->str())};
+				}
 				break;
 			}
 			
@@ -345,7 +467,7 @@ namespace purson{
 		if(delim_fn(*it)){
 			if(!ty)
 				throw parser_error{var.loc(), "can not have untyped uninitialized variables"};
-			return std::make_shared<const var_decl_expr>(id.str(), true, ty);
+			return std::make_shared<const var_decl_expr>(id.str(), ty, true);
 		}
 		else if(it->str() == "="){
 			auto return_expr = parse_value(delim_fn, ++it, end, scope);

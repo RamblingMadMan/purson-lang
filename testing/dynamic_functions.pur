@@ -1,0 +1,12 @@
+dynFnTest(){
+    fnExpr = ?fn(a, b) => a + b?;
+
+    addFnJITed = fnExpr();
+
+    fns(v) => match(v){
+        "add" => fn(a, b) => a + b;
+        "mul" => fn(a, b) => a b;
+    };
+
+    fns(
+}

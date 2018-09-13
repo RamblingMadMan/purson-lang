@@ -16,7 +16,7 @@ namespace purson{
 	struct unary_op_tag_t{} inline constexpr unary_op;
 	
 	enum class operator_type{
-		comma,
+		dot, comma,
 		add, sub, mul, div, mod, pow,
 		equ, neq, lt, gt, lte, gte,
 		inc, dec,
@@ -25,8 +25,10 @@ namespace purson{
 	};
 	
 	inline std::size_t binary_op_precedence(operator_type binop){
-		#define PRECEDENCE_BASE __COUNTER__
+		#define EXPAND(x) x
+		#define PRECEDENCE_BASE EXPAND(__COUNTER__)
 		switch(binop){
+			case operator_type::dot: return __COUNTER__ - PRECEDENCE_BASE;
 			case operator_type::comma: return __COUNTER__ - PRECEDENCE_BASE;
 			
 			case operator_type::pow: return __COUNTER__ - PRECEDENCE_BASE;
@@ -40,12 +42,14 @@ namespace purson{
 			default: throw operator_error{"invalid binary operator"};
 		}
 		#undef PRECEDENCE_BASE
+		#undef EXPAND
 	}
 	
 	inline std::optional<operator_type> op_type_from_str(std::string_view str){
 		if(!str.size()) return std::nullopt;
 		else if(str.size() == 1){
 			switch(str[0]){
+				case '.': return operator_type::dot;
 				case ',': return operator_type::comma;
 				case '+': return operator_type::add;
 				case '-': return operator_type::sub;

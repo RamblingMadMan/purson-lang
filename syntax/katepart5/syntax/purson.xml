@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd">
+<language name="Purson" version="1.00" kateversion="2.4" section="Sources" extensions="*.pur">
+	<highlighting>
+		<list name="keywords">
+			<item>fn</item>
+			<item>var</item>
+			<item>type</item>
+			<item>class</item>
+			<item>const</item>
+			<item>match</item>
+		</list>
+		<list name="controls">
+			<item>if</item>
+			<item>else</item>
+			<item>for</item>
+			<item>while</item>
+			<item>do</item>
+			<item>then</item>
+			<item>return</item>
+		</list>
+		<list name="import">
+			<item>import</item>
+			<item>export</item>
+		</list>
+		<list name="types">
+			<item>Unit</item>
+			<item>Natural</item>
+			<item>Natural8</item>
+			<item>Natural16</item>
+			<item>Natural32</item>
+			<item>Natural64</item>
+			<item>Integer</item>
+			<item>Integer8</item>
+			<item>Integer16</item>
+			<item>Integer32</item>
+			<item>Integer64</item>
+			<item>Rational</item>
+			<item>Rational16</item>
+			<item>Rational32</item>
+			<item>Rational64</item>
+			<item>Rational128</item>
+			<item>Real</item>
+			<item>Real16</item>
+			<item>Real32</item>
+			<item>Real64</item>
+		</list>
+		<list name="builtins">
+			<item>this</item>
+		</list>
+		<contexts>
+			<context attribute="Normal Text" lineEndContext="#pop" name="Normal Text">
+				<keyword attribute="Keyword" context="#stay" String="keywords" />
+				<keyword attribute="Types" context="#stay" String="types" />
+				<keyword attribute="Control" context="#stay" String="controls" />
+				<keyword attribute="Import" context="#stay" String="import" />
+				<keyword attribute="Builtins" context="#stay" String="builtins" />
+				<StringDetect attribute="Comment" context="comment" String="//" />
+				<StringDetect attribute="Multi Comment" context="multicomment" String="/*" />
+				<DetectChar attribute="String" context="string" char="&quot;" />
+			</context>
+			<context attribute="String" lineEndContext="#stay" name="string">
+				<DetectChar attribute="String" context="#pop" char="&quot;" />
+			</context>
+			<context attribute="Comment" lineEndContext="#pop" name="comment" />
+			<context attribute="Multi Comment" lineEndContext="#stay" name="multicomment">
+				<StringDetect attribute="Multi Comment" context="#pop" String="*/" />
+			</context>
+		</contexts>
+		<itemDatas>
+			<itemData name="Normal Text" defStyleNum="dsNormal" />
+			<itemData name="Keyword" defStyleNum="dsKeyword" />
+			<itemData name="Types" defStyleNum="dsDataType" />
+			<itemData name="Control" defStyleNum="dsControlFlow" />
+			<itemData name="Import" defStyleNum="dsImport" />
+			<itemData name="Builtins" defStyleNum="dsBuiltIn" />
+			<itemData name="String" defStyleNum="dsString" />
+			<itemData name="Comment" defStyleNum="dsComment" />
+			<itemData name="Multi Comment" defStyleNum="dsComment" />
+		</itemDatas>
+	</highlighting>
+
+	<general>
+		<comments>
+			<comment name="singleLine" start="//" />
+			<comment name="multiLine" start="/*" end="*/" />
+		</comments>
+		<keyword casesensistive="1" />
+	</general>
+</language>

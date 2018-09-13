@@ -1,0 +1,55 @@
+import[C] gl;
+
+fn createBuffer(size: Natural32) => class{
+	this :> Natural32;
+	ctor => {
+		glCreateBuffers(1, this);
+		glNamedBufferStorage(
+			this, size, 0,
+			GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_DYNAMIC_STORAGE_BIT |
+			GL_MAP_PERSISTENT_BIT
+		);
+	};
+	dtor => glDeleteBuffers(1, this);
+};
+
+fn createBuffer(size: Natural32, data) => class{
+	this :> Natural32;
+	ctor => {
+		glCreateBuffers(1, this);
+		glNamedBufferStorage(
+			this, size, data,
+			GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_DYNAMIC_STORAGE_BIT |
+			GL_MAP_PERSISTENT_BIT
+		);
+	};
+	dtor => glDeleteBuffers(1, this);
+};
+
+fn createBuffers(n: Natural32, sizes: Natural32[n]) => class{
+	this :> Natural32[n];
+	ctor => {
+		glCreateBuffers(n, this);
+		for(i from 0 to n){
+			glNamedBufferStorage(
+				this[i], sizes[i], 0,
+				GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_DYNAMIC_STORAGE_BIT |
+				GL_MAP_PERSISTENT_BIT
+			);
+		}
+	}
+	dtor => glDeleteBuffers(n, this);
+};
+
+fn createBuffers(1, size) => createBuffer(size);
+
+fn createVertexArrays(n) => class{
+	this :> Natural32[n];
+	ctor => glCreateVertexArrays(n, this);
+	dtor => glDeleteVertexArrays(n, this);
+};
+
+fn createVertexArray() => createVertexArrays(1);
+
+fn vertexArrayVertexBuffer(vao, buf, idx, offset = 0, stride = 0)
+	=> glVertexArrayVertexBuffer(vao, idx, buf, offset, stride);

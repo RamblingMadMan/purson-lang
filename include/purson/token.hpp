@@ -8,7 +8,7 @@ namespace purson{
 	 * The type of token
 	 **/
 	enum class token_type{
-		id, keyword, type, op, bracket, integer, real, string, ch, end, eof
+		id, keyword, type, op, bracket, integer, real, string, end, eof
 	};
 	
 	/**

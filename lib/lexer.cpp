@@ -15,9 +15,12 @@ namespace purson{
 	bool is_keyword(std::string_view kw){
 		return
 			(kw == "var") ||
+			(kw == "let") ||
 			(kw == "fn") ||
+			(kw == "abstract") ||
 			(kw == "type") ||
-			(kw == "axiom") ||
+			(kw == "import") ||
+			(kw == "export") ||
 			(kw == "match") ||
 			(kw == "if") ||
 			(kw == "else");
@@ -142,6 +145,48 @@ namespace purson{
 					}
 				}
 					
+			}
+			else if((cp == '"') || (cp == '\'')){
+				auto delimCh = cp;
+
+				bool closed = false;
+
+				if(it != it_end){
+					while(1){
+						auto cp_data = next_cp();
+						cp = cp_data.cp;
+						line = cp_data.cp;
+						col = cp_data.col;
+
+						if(it == it_end) break;
+
+						else if(cp == '\\'){
+							auto cp_data = next_cp();
+							cp = cp_data.cp;
+							line = cp_data.cp;
+							col = cp_data.col;
+
+							switch(cp){
+								case 'n':
+								case 'r':
+								case '"':
+								case '\'':
+									break;
+
+								default:
+									throw lexer_error{location{name, line, col, 1}, fmt::format("invalid escape character '{}'", cp)};
+							}
+						}
+
+						else if(cp == delimCh){
+							closed = true;
+							break;
+						}
+					}
+				}
+
+				tok_type = token_type::string;
+				tok_size = std::distance(tok_start, it);
 			}
 			else if(is_bracket(cp)){
 				tok_type = token_type::bracket;

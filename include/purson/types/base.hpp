@@ -6,6 +6,8 @@
 #include "../exception.hpp"
 
 namespace purson{
+	class typeset;
+
 	class type_error: public exception{ using exception::exception; };
 	
 	//! Base class for types
@@ -28,7 +30,10 @@ namespace purson{
 		virtual const std::size_t num_params() const noexcept = 0;
 		virtual const type *param_type(std::size_t idx) const noexcept = 0;
 	};
-	
+
+	//! type of type value
+	struct type_type: virtual type{};
+
 	//! base for unit types (probably only one)
 	struct unit_type: virtual type{};
 
@@ -38,11 +43,14 @@ namespace purson{
 	//! base for numeric types
 	struct numeric_type: arithmetic_type{};
 
-	//! base for character types
-	struct character_type: arithmetic_type{};
+	enum class char_encoding{
+		ascii, utf8, utf16, utf32
+	};
 
 	//! base for string types
-	struct string_type: virtual type{};
+	struct string_type: virtual type{
+		virtual char_encoding encoding() const noexcept = 0;
+	};
 }
 
 #endif // !PURSON_TYPES_BASE_HPP

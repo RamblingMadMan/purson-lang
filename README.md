@@ -23,9 +23,16 @@ fn pow(x, 0) => 1;
 fn fib(a) => fib(a-1) + fib(a-2);
 fn fib(1) => 1;
 fn fib(0) => 0;
+
+type Int => Integer;
+
+fn main(){
+    var intTy = Int;
+    fn powi = pow: intTy -> Int -> Integer;
+}
 ```
 
-### Language Features
+## Language Features
 
 - Type inference
 - Pattern matching

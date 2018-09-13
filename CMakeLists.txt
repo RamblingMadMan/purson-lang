@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9.0 FATAL_ERROR)
 
-project(purson)
+project(purson-lang)
 
 include(ExternalProject)
 
@@ -17,3 +17,5 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 add_subdirectory(${DEPENDENCY_DIR}/fmt)
 add_subdirectory(lib)
 add_subdirectory(repl)
+add_subdirectory(comp)
+add_subdirectory(bear)

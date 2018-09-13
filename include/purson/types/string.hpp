@@ -4,12 +4,23 @@
 #include "base.hpp"
 
 namespace purson{
-	struct ascii_string_axiom: string_axiom{};
-	struct utf_string_axiom: string_axiom{};
+	struct ascii_string_type: string_type{
+		virtual char_encoding encoding() const noexcept override{ return char_encoding::ascii; }
+	};
+
+	struct utf_string_type: string_type{};
 	
-	struct utf8_string_axiom: utf_string_axiom{};
-	struct utf16_string_axiom: utf_string_axiom{};
-	struct utf32_string_axiom: utf_string_axiom{};
+	struct utf8_string_type: utf_string_type{
+		virtual char_encoding encoding() const noexcept override{ return char_encoding::utf8; }
+	};
+
+	struct utf16_string_type: utf_string_type{
+		virtual char_encoding encoding() const noexcept override{ return char_encoding::utf16; }
+	};
+
+	struct utf32_string_type: utf_string_type{
+		virtual char_encoding encoding() const noexcept override{ return char_encoding::utf32; }
+	};
 }
 
 #endif // !PURSON_AXIOMS_STRING_HPP

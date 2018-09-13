@@ -1,0 +1,15 @@
+fn sum([a, b, ...]) => a + sum([b, ...]);
+fn sum([a]) => a;
+
+fn product([a, b, ...]) => a * product([b, ...]);
+fn product([a]) => a;
+
+fn sort(ref l: List, sorter = fn(a, b) => a < b){
+	for(i = 0; i < length(l); i++){
+		if((i > 0) & sorter(l[i], l[i-1])){
+			var old = l[i];
+			l[i] = l[i-1];
+			l[i-1] = old;
+		}
+	}
+}

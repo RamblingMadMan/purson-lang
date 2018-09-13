@@ -1,0 +1,14 @@
+import gl;
+
+fn run(){
+	var points = (
+		<-1.0, -1.0, 0.0>,
+		< 1.0, -1.0, 0.0>,
+		< 1.0,  1.0, 0.0>,
+		<-1.0,  1.0, 0.0>
+	);
+	
+	var buf = gl.createBuffer((sizeof Vec3) * 4, points);
+	var vao = gl.createVertexArray();
+	gl.vertexArrayVertexBuffer(vao, buf, 0);
+}

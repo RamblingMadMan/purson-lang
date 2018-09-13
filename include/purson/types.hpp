@@ -10,6 +10,8 @@
  * Constructs describing the type system of purson
  **/
 
+#include "expressions/base.hpp"
+
 #include "types/numeric.hpp"
 
 namespace purson{
@@ -32,7 +34,22 @@ namespace purson{
 			 * @returns the unit type
 			 **/
 			virtual const unit_type *unit() const noexcept = 0;
-			
+
+			/**
+			 * Get type value type
+			 *
+			 * @returns the type value type
+			 */
+		 	virtual const type_type *type_() const noexcept = 0;
+
+		 	/**
+		 	 * Get string type
+		 	 *
+		 	 * @param[in] encoding the string encoding for the type
+		 	 * @returns nullptr if type not found, otherwise the string type
+		 	 */
+		 	virtual const string_type *string(char_encoding encoding) const noexcept = 0;
+
 			/**
 			 * Get natural type
 			 * 
@@ -74,6 +91,18 @@ namespace purson{
 			 **/
 			virtual const function_type *function(const type *return_type, const std::vector<const type*> &param_types) const = 0;
 	};
+
+	// annoying class declaration needed for function declaration
+	class type_block_expr;
+
+	/**
+	 * Return a type that fulfils the requirements set in the block
+	 *
+	 * @param[in] block the type block
+	 * @param[in] types typeset to use
+	 * @returns the solved return type
+	 */
+ 	const type *solve_type(const type_block_expr *block, const typeset *types);
 	
 	/**
 	 * Get an immutable set of all basic types
@@ -83,11 +112,83 @@ namespace purson{
 	const typeset *types(std::string_view ver);
 	
 	/**
-	 * Get a mutable set of types initialized with every basic types
+	 * Get a mutable set of types initialized with every basic type
 	 * 
 	 * @param[in] ver version string
 	 **/
 	std::unique_ptr<typeset> mutable_types(std::string_view ver);
+
+	namespace detail{
+		template<typename...>
+		class get_type_helper;
+
+		template<typename Arg>
+		void push_arg_types(const typeset *ts, std::vector<const type *> &tys){
+			tys.push_back(get_type_helper<Arg>::get(ts));
+		}
+
+		template<typename Arg, typename Arg0, typename ... Args>
+		void push_arg_types(const typeset *ts, std::vector<const type *> &tys){
+			push_arg_types<Arg>(ts, tys);
+			push_arg_types<Arg0, Args...>(ts, tys);
+		}
+
+		template<>
+		class get_type_helper<void>{
+			public:
+				static auto get(const typeset *ts) noexcept{ return ts->unit(); }
+		};
+
+		template<>
+		class get_type_helper<std::int16_t>{
+			public:
+				static auto get(const typeset *ts) noexcept{ return ts->integer(16); }
+		};
+
+		template<>
+		class get_type_helper<std::int32_t>{
+			public:
+				static auto get(const typeset *ts) noexcept{ return ts->integer(32); }
+		};
+
+		template<>
+		class get_type_helper<std::int64_t>{
+			public:
+				static auto get(const typeset *ts) noexcept{ return ts->integer(64); }
+		};
+
+		template<>
+		class get_type_helper<std::uint16_t>{
+			public:
+				static auto get(const typeset *ts) noexcept{ return ts->natural(16); }
+		};
+
+		template<>
+		class get_type_helper<std::uint32_t>{
+			public:
+				static auto get(const typeset *ts) noexcept{ return ts->natural(32); }
+		};
+
+		template<>
+		class get_type_helper<std::uint64_t>{
+			public:
+				static auto get(const typeset *ts) noexcept{ return ts->natural(64); }
+		};
+
+		template<typename Ret, typename ... Params>
+		class get_type_helper<Ret(Params...)>{
+			public:
+				static auto get(const typeset *ts) noexcept{
+					std::vector<const type*> param_tys;
+					param_tys.reserve(sizeof...(Params));
+					detail::push_arg_types<Params...>(ts, param_tys);
+					return ts->function(get_type_helper<Ret>::get(ts), param_tys);
+				}
+		};
+	}
+
+	template<typename T>
+	auto get_type(const typeset *ts){ return detail::get_type_helper<T>::get(ts); }
 }
 
 #endif // !PURSON_TYPES_HPP

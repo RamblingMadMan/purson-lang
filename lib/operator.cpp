@@ -16,7 +16,7 @@ namespace purson{
 		
 		m_bin = true;
 		m_op_type = op_ty;
-		m_result_type = nullptr;
+		m_result_type = promote_type(lhs, rhs);
 	}
 	
 	void op::set_op(unary_op_tag_t, std::optional<operator_type> op_ty_opt, const type *operand){
@@ -38,6 +38,6 @@ namespace purson{
 		
 		m_bin = false;
 		m_op_type = op_ty;
-		m_result_type = nullptr;
+		m_result_type = operand;
 	}
 }

@@ -19,7 +19,32 @@ set(
 	compile_llvm/var.cpp
 )
 
-add_library(purson ${PURSON_SOURCES})
+set(
+	PURSON_HEADERS
+
+	../include/purson/expressions/var.hpp
+	../include/purson/expressions/function.hpp
+	../include/purson/expressions/literal.hpp
+	../include/purson/expressions/match.hpp
+	../include/purson/expressions/op.hpp
+	../include/purson/expressions/type.hpp
+
+	../include/purson/types/base.hpp
+	../include/purson/types/numeric.hpp
+	../include/purson/types/string.hpp
+
+	../include/purson/exception.hpp
+	../include/purson/location.hpp
+	../include/purson/token.hpp
+	../include/purson/types.hpp
+	../include/purson/operator.hpp
+	../include/purson/expressions.hpp
+	../include/purson/lexer.hpp
+	../include/purson/parser.hpp
+	../include/purson/module.hpp
+)
+
+add_library(purson ${PURSON_HEADERS} ${PURSON_SOURCES})
 
 #target_compile_definitions(purson PRIVATE ${LLVM_CXXFLAGS})
 target_include_directories(purson PRIVATE ${GMP_INCLUDE_DIRS} ${MPFR_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})

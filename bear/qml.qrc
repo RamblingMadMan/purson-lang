@@ -1,0 +1,9 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+	<qresource>
+		<file>main.qml</file>
+	</qresource>
+	<qresource prefix="/qml">
+		<file alias="BearEditor.qml">qml/BearEditor.qml</file>
+	</qresource>
+</RCC>

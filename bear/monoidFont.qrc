@@ -1,0 +1,9 @@
+<!DOCTYPE RCC>
+<RCC version="1.0"> 
+    <qresource>
+        <file>fonts/Monoid-Bold.ttf</file>
+        <file>fonts/Monoid-Italic.ttf</file>
+        <file>fonts/Monoid-Regular.ttf</file>
+        <file>fonts/Monoid-Retina.ttf</file>
+    </qresource>
+</RCC>

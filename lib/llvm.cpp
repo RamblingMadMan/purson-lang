@@ -1,3 +1,4 @@
+#include <purson/expressions/op.hpp>
 #include "llvm.hpp"
 
 namespace purson{
@@ -11,6 +12,14 @@ namespace purson{
 	llvm::Value *llvm_compile_rvalue(const rvalue_expr *rvalue, llvm_state *state){
 		if(auto lit = dynamic_cast<const literal_expr*>(rvalue))
 			return llvm_compile_literal(lit, state);
+		else if(auto binop = dynamic_cast<const binary_op_expr*>(rvalue)){
+			return llvm_compile_binop(binop, state);
+		}
+		else if(auto var_ref = dynamic_cast<const var_ref_expr*>(rvalue)){
+			auto var = state->get_var(var_ref->name());
+			if(!var) throw module_error{fmt::format("identifier '{}' does not refer to anything", var_ref->name())};
+			return var->second;
+		}
 		else if(auto var_def = dynamic_cast<const var_def_expr*>(rvalue))
 			return llvm_compile_var_def(var_def, state);
 		else if(auto var_decl = dynamic_cast<const var_decl_expr*>(rvalue))
@@ -52,33 +61,219 @@ namespace purson{
 			throw module_error{fmt::format("unexpected {} value expression '{}'", rvalue->value_type()->str(), rvalue->str())};
 		}
 	}
+
+	llvm::Value *llvm_compile_binop(const binary_op_expr *binop, llvm_state *state){
+		auto lhs_val = llvm_compile_rvalue(binop->lhs().get(), state);
+		auto rhs_val = llvm_compile_rvalue(binop->rhs().get(), state);
+
+		auto lhs_ty = binop->lhs()->value_type();
+		auto rhs_ty = binop->rhs()->value_type();
+
+		auto higher_ty = promote_type(lhs_ty, rhs_ty);
+		auto llvm_ty = llvm_type(higher_ty);
+
+		if(lhs_ty == higher_ty){
+			if(auto nat = dynamic_cast<const natural_type*>(lhs_ty)){
+				rhs_val = state->builder()->CreateIntCast(rhs_val, llvm_ty, false);
+			}
+			else if(auto int_ = dynamic_cast<const integer_type*>(lhs_ty)){
+				if(dynamic_cast<const natural_type*>(rhs_ty)){
+					rhs_val = state->builder()->CreateCast(llvm::CastInst::CastOps::SExt, rhs_val, llvm_ty);
+				}
+				else{
+					rhs_val = state->builder()->CreateIntCast(rhs_val, llvm_ty, true);
+				}
+			}
+			else if(auto rational = dynamic_cast<const rational_type*>(lhs_ty)){
+				throw module_error{"rational compilation currently unsupported"};
+			}
+			else if(auto real = dynamic_cast<const real_type*>(lhs_ty)){
+				if(dynamic_cast<const rational_type*>(rhs_ty)){
+					throw module_error{"rational compilation currently unsupported"};
+				}
+				else if(dynamic_cast<const integer_type*>(rhs_ty)){
+					rhs_val = state->builder()->CreateCast(llvm::CastInst::CastOps::SIToFP, rhs_val, llvm_ty);
+				}
+				else if(dynamic_cast<const natural_type*>(rhs_ty)){
+					rhs_val = state->builder()->CreateCast(llvm::CastInst::CastOps::UIToFP, rhs_val, llvm_ty);
+				}
+				else{
+					rhs_val = state->builder()->CreateCast(llvm::CastInst::CastOps::SIToFP, rhs_val, llvm_ty);
+				}
+			}
+			else
+				throw module_error{"unexpected type in compilation"};
+		}
+		else{
+			if(auto nat = dynamic_cast<const natural_type*>(rhs_ty)){
+				lhs_val = state->builder()->CreateIntCast(lhs_val, llvm_ty, false);
+			}
+			else if(auto int_ = dynamic_cast<const integer_type*>(rhs_ty)){
+				if(dynamic_cast<const natural_type*>(lhs_ty)){
+					lhs_val = state->builder()->CreateCast(llvm::CastInst::CastOps::SExt, lhs_val, llvm_ty);
+				}
+				else{
+					lhs_val = state->builder()->CreateIntCast(lhs_val, llvm_ty, true);
+				}
+			}
+			else if(auto rational = dynamic_cast<const rational_type*>(rhs_ty)){
+				throw module_error{"rational compilation currently unsupported"};
+			}
+			else if(auto real = dynamic_cast<const real_type*>(rhs_ty)){
+				if(dynamic_cast<const rational_type*>(lhs_ty)){
+					throw module_error{"rational compilation currently unsupported"};
+				}
+				else if(dynamic_cast<const integer_type*>(lhs_ty)){
+					lhs_val = state->builder()->CreateCast(llvm::CastInst::CastOps::SIToFP, lhs_val, llvm_ty);
+				}
+				else if(dynamic_cast<const natural_type*>(lhs_ty)){
+					lhs_val = state->builder()->CreateCast(llvm::CastInst::CastOps::UIToFP, lhs_val, llvm_ty);
+				}
+				else{
+					lhs_val = state->builder()->CreateCast(llvm::CastInst::CastOps::SIToFP, lhs_val, llvm_ty);
+				}
+			}
+			else
+				throw module_error{"unexpected type in compilation"};
+		}
+
+		switch(binop->operator_().op_type()){
+			case operator_type::add:{
+				if(dynamic_cast<const real_type*>(higher_ty))
+					return state->builder()->CreateFAdd(lhs_val, rhs_val);
+				else
+					return state->builder()->CreateAdd(lhs_val, rhs_val);
+			}
+			case operator_type::sub:{
+				if(dynamic_cast<const real_type*>(higher_ty))
+					return state->builder()->CreateFSub(lhs_val, rhs_val);
+				else
+					return state->builder()->CreateSub(lhs_val, rhs_val);
+			}
+			case operator_type::mul:{
+				if(dynamic_cast<const real_type*>(higher_ty))
+					return state->builder()->CreateFMul(lhs_val, rhs_val);
+				else
+					return state->builder()->CreateMul(lhs_val, rhs_val);
+			}
+			case operator_type::div:{
+				if(dynamic_cast<const natural_type*>(higher_ty))
+					return state->builder()->CreateUDiv(lhs_val, rhs_val);
+				else if(dynamic_cast<const integer_type*>(higher_ty))
+					return state->builder()->CreateSDiv(lhs_val, rhs_val);
+				else if(dynamic_cast<const real_type*>(higher_ty)){
+					return state->builder()->CreateFDiv(lhs_val, rhs_val);
+				}
+			}
+
+			default:
+				throw module_error{"unsupported binary operator"};
+		}
+	}
 	
 	llvm_fn_gen_t &llvm_compile_fn_decl(const fn_decl_expr *decl, llvm_state *state){
-		throw module_error{"function declaration not implemented. define function as part of declaration"};
-		
+		bool is_full_decl = true;
+
 		auto llvm_ret_ty = llvm_type(decl->return_type());
-		std::vector<llvm::Type*> param_tys;
+		std::vector<llvm::Type*> llvm_param_tys;
+		std::vector<const type*> param_tys;
+		llvm_param_tys.reserve(decl->params().size());
 		param_tys.reserve(decl->params().size());
 		for(auto &&param : decl->params()){
-			if(!param.second) throw module_error{"only explicit typing is currently supported"};
-			param_tys.push_back(llvm_type(param.second));
+			if(!param.second){
+				is_full_decl = false;
+				throw module_error{"only explicit typing is currently supported"};
+			}
+			llvm_param_tys.push_back(llvm_type(param_tys.emplace_back(param.second)));
 		}
 		
-		auto llvm_fn_ty = llvm::FunctionType::get(llvm_ret_ty, param_tys, false);
-		
-		auto ret = [decl, llvm_ret_ty, llvm_fn_ty, state](const type *ret_type_, const std::vector<const type*> &param_tys_){
+		auto llvm_fn_ty = llvm::FunctionType::get(llvm_ret_ty, llvm_param_tys, false);
+
+		auto mangled = mangle_fn_name(decl->name(), decl->return_type(), param_tys);
+
+		if(is_full_decl){
+			if(decl->visibility() == fn_visibility::imported){
+				if(auto fn = state->module()->getFunction(mangled)){
+					fn->setLinkage(llvm::GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+
+					for(std::size_t i = 0; i < decl->params().size(); i++){
+						auto arg = fn->args().begin() + i;
+						arg->setName(std::string(decl->params()[i].first));
+					}
+
+					state->set_mangled_fn(mangled, fn);
+					auto ret = [decl, fn, mangled](const type *ret_type_, const std::vector<const type*> &param_tys_){
+						std::vector<const type*> param_tys;
+						param_tys.reserve(decl->params().size());
+						if(!ret_type_ && param_tys_.empty())
+							return fn;
+						else{
+							if(decl->return_type()){
+								if(ret_type_){
+									if(ret_type_ != decl->return_type())
+										throw module_error{"bad return type substitution"};
+								} else
+									ret_type_ = decl->return_type();
+							} else if(!ret_type_)
+									throw module_error{fmt::format("no return type given in reference to '{}'", decl->name())};
+
+							for(std::size_t i = 0; i < decl->params().size(); i++){
+								if(param_tys_.size() > i){
+									if(param_tys_[i]){
+										if(decl->params()[i].second && (param_tys_[i] != decl->params()[i].second))
+											throw module_error{fmt::format("invalid parameter type given for parameter {}", i + 1)};
+										else
+											param_tys.emplace_back(param_tys_[i]);
+									}
+									else{
+										if(!decl->params()[i].second)
+											throw module_error{fmt::format("substitution required for parameter {}", i + 1)};
+
+										param_tys.emplace_back(decl->params()[i].second);
+									}
+								}
+								else if(!decl->params()[i].second)
+									throw module_error{fmt::format("substitution required for parameter {}", i + 1)};
+								else
+									param_tys.emplace_back(decl->params()[i].second);
+							}
+
+							auto new_mangled = mangle_fn_name(decl->name(), ret_type_, param_tys);
+							if(mangled == new_mangled)
+								return fn;
+							else
+								throw module_error{fmt::format("bad function declaration substitution for '{}'", decl->name())};
+						}
+					};
+
+					return state->add_fn(decl->name(), std::move(ret));
+				}
+			}
+		}
+
+		auto ret = [decl, param_tys, llvm_ret_ty, llvm_fn_ty, state](const type *ret_type_, const std::vector<const type*> &param_tys_){
 			std::vector<const type*> criteria{ret_type_};
 			criteria.reserve(param_tys_.size() + 1);
 			criteria.insert(end(criteria), begin(param_tys_), end(param_tys_));
+
+			if(decl->return_type()){
+				if(ret_type_ != decl->return_type())
+					throw module_error{"different return type used in declaration call"};
+			}
+			else if(!ret_type_)
+				throw module_error{"different return type used in declaration call"};
+			else
+				ret_type_ = decl->return_type();
+
 			auto mangled = mangle_fn_name(decl->name(), ret_type_, param_tys_);
 			auto fn = state->get_mangled_fn(mangled);
 			if(!fn)
 				throw module_error{"function not defined"};
-			
+
 			return fn;
 		};
-		
-		return state->add_fn(decl->name(), std::move(ret));
+
+		return state->add_fn(mangled, std::move(ret));
 	}
 	
 	llvm_fn_gen_t &llvm_compile_fn_def(const fn_def_expr *def, llvm_state *state){
@@ -116,10 +311,10 @@ namespace purson{
 			param_tys.reserve(def->params().size());
 			llvm_param_tys.reserve(def->params().size());
 			for(std::size_t i = 0; i < def->params().size(); i++){
-				const type *param_ty = nullptr;
+				const type *param_ty = def->params()[i].second;
 				llvm::Type *llvm_param_ty = nullptr;
-				if(auto def_param_ty = def->params()[i].second){
-					llvm_param_ty = llvm_type(def_param_ty);
+				if(param_ty){
+					llvm_param_ty = llvm_type(param_ty);
 					
 					if(param_tys_.size() > i){
 						param_ty = param_tys_[i];
@@ -130,7 +325,7 @@ namespace purson{
 				else if(param_tys_.size() > i){
 					param_ty = param_tys_[i];
 					llvm_param_ty = llvm_type(param_ty);
-					if(!llvm_param_ty)
+					if(!param_ty || !llvm_param_ty)
 						throw module_error{"parameter must be substituted"};
 				}
 				else
@@ -140,11 +335,11 @@ namespace purson{
 				llvm_param_tys.push_back(llvm_param_ty);
 			}
 
-			auto mangled_name = mangle_fn_name(def->name(), ret_ty, param_tys);
+			auto mangled_name = mangle_fn_name(def->name(), ret_ty, param_tys, def->linkage());
 			auto res = matches.find(mangled_name);
 			if(res != end(matches))
 				return res->second;
-			
+
 			auto fn = state->get_fn(def->name());
 			if(fn){
 				throw module_error{"llvm function declaration-definition matching not implemented"};
@@ -156,7 +351,14 @@ namespace purson{
 			else{
 				auto fn_ty = llvm::FunctionType::get(llvm_ret_ty, llvm_param_tys, false);
 
-				fn = llvm::Function::Create(fn_ty, llvm::Function::ExternalLinkage, mangled_name, state->module());
+				auto llvm_linkage = llvm::GlobalValue::LinkageTypes::ExternalLinkage;
+
+				if(def->visibility() == fn_visibility::local) llvm_linkage = llvm::GlobalValue::LinkageTypes::InternalLinkage;
+				else if(def->visibility() == fn_visibility::imported) llvm_linkage = llvm::GlobalValue::LinkageTypes::AvailableExternallyLinkage; // ExternalWeakLinkage?
+
+				fn = llvm::Function::Create(fn_ty, llvm_linkage, mangled_name, state->module());
+				//fn->setCallingConv(llvm::CallingConv::C);
+				//fn->setOnlyAccessesArgMemory();
 				
 				auto emplace_res = matches.emplace(mangled_name, fn);
 				if(!emplace_res.second)
@@ -169,7 +371,8 @@ namespace purson{
 				llvm_state fn_state(state->module(), state, &builder);
 				for(std::size_t i = 0; i < def->params().size(); i++){
 					auto arg = fn->arg_begin() + i;
-					fn_state.set_var(def->params()[i].first, param_tys_[i], arg);
+					arg->setName(std::string(def->params()[i].first));
+					fn_state.set_var(def->params()[i].first, param_tys[i], arg);
 				}
 
 				try{
@@ -187,8 +390,6 @@ namespace purson{
 						builder.CreateRetVoid();
 					else if(mangled_name == "main")
 						builder.CreateRet(builder.getInt32(0));
-
-					fmt::print(stderr, "info: function '{}' compiled\n", mangled_name);
 
 					state->set_mangled_fn(mangled_name, fn);
 
@@ -222,6 +423,22 @@ namespace purson{
 			subs.erase(begin(subs));
 			auto mangled = mangle_fn_name(call->fn()->name(), call->fn()->return_type(), subs);
 			auto fn = state->get_mangled_fn(mangled);
+
+			auto fn_ty = fn->getFunctionType();
+			if(!fn_ty->getReturnType())
+				throw module_error{fmt::format("un-fulfilled function identifier {} with null return type", call->fn()->name())};
+
+			for(std::size_t i = 0; i < call->fn()->params().size(); i++){
+				auto arg = fn->arg_begin() + i;
+				if(!arg->getType())
+					throw module_error{
+						fmt::format(
+							"un-fulfilled function identifier {} with null type for parameter {}",
+							call->fn()->name(), call->fn()->params()[i].first
+						)
+					};
+			}
+
 			return state->builder()->CreateCall(fn, llvm_arg_values);
 		}
 		else{
