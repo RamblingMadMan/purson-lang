@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include <QTextStream>
 #include <fmt/core.h>
 
@@ -45,6 +47,8 @@ void BearDocumentHandler::setFileUrl(const QUrl &arg){
 	if(m_fileUrl != arg){
 		m_fileUrl = arg;
 
+		std::filesystem::path filepath(arg.toLocalFile().toStdString());
+
 		QString fileName = arg.fileName();
 		QFile file(arg.toLocalFile());
 
@@ -53,9 +57,12 @@ void BearDocumentHandler::setFileUrl(const QUrl &arg){
 			if(fileName.isEmpty())
 				m_documentTitle = QStringLiteral("untitled");
 			else
-				m_documentTitle = fileName;
+				m_documentTitle = QString::fromStdString(filepath.filename());
 
 			emit documentTitleChanged();
+		}
+		else{
+			throw std::runtime_error{fmt::format("couldn't load file {}", fileName.toStdString())};
 		}
 
 		emit fileUrlChanged();

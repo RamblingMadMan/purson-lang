@@ -230,7 +230,6 @@ Page {
 								}
 								else{
 									document.fileUrl = project.dirUrl + "/" + modelData;
-									fileName.text = modelData
 								}
 							}
 
@@ -380,7 +379,7 @@ Page {
 			textDocument: textEdit.textDocument
 
 			onFileUrlChanged: {
-				fileName.text = document.fileUrl.toString()
+				fileName.text = document.documentTitle
 			}
 		}
 	}

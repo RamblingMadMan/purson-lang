@@ -134,7 +134,7 @@ int main(int argc, char *argv[]){
 
 		if(settings.contains("openFile")){
 			auto openFile = settings.value("openFile");
-			documentHandler->setFileUrl(openFile.value<QUrl>());
+			documentHandler->setFileUrl(projectDir.toString() + "/" + openFile.value<QUrl>().toString());
 		}
 	}
 	else{
