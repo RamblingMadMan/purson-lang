@@ -11,8 +11,8 @@ ApplicationWindow {
 	objectName: "appWindow"
 
 	visible: true
-	minimumWidth: 640
-	minimumHeight: 480
+	minimumWidth: 800
+	minimumHeight: 600
 	title: qsTr("Bear")
 
 	Material.theme: Material.Dark

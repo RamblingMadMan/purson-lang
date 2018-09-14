@@ -92,26 +92,26 @@ class BearProjectHandler: public QObject{
 		Q_OBJECT
 
 		Q_PROPERTY(QUrl dirUrl READ dirUrl WRITE setDirUrl NOTIFY dirUrlChanged)
-		Q_PROPERTY(QVector<QUrl> modulePaths READ modulePaths WRITE setModulePaths NOTIFY modulePathsChanged)
+		Q_PROPERTY(QVector<QString> moduleNames READ moduleNames WRITE setModuleNames NOTIFY moduleNamesChanged)
 
 	public:
 		QUrl dirUrl() const;
-		const QVector<QUrl> &modulePaths() const;
+		const QVector<QString> &moduleNames() const;
 		BearProject *project(){ return m_project.get(); }
 
 	public slots:
 		void setDirUrl(const QUrl &arg);
-		void setModulePaths(const QVector<QUrl> &arg);
+		void setModuleNames(const QVector<QString> &arg);
 
 		Q_INVOKABLE void openProject(const QUrl &dir);
 
 	signals:
 		void dirUrlChanged();
-		void modulePathsChanged();
+		void moduleNamesChanged();
 
 	private:
 		QUrl m_dirUrl;
-		QVector<QUrl> m_modulePaths;
+		QVector<QString> m_moduleNames;
 
 		std::unique_ptr<BearProject> m_project;
 };

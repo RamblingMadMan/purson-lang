@@ -1,5 +1,5 @@
 <bear version="0.1">
-	<module purson-version="dev" name="main">
+	<module purson-version="dev" name="Main">
 		<source>main.pur</source>
 	</module>
 </bear>

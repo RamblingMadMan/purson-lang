@@ -1,0 +1,12 @@
+import[c] fn printf(fmt: CString, ...) -> Unit;
+import[c] fn getline() -> String;
+
+export fn output(x) => match(type(x)){
+	String => printf("%s", toCString(x)),
+	Natural32 => printf("%i", x),
+	Integer32 => printf("%u", x),
+	Real32 => printf("%f", x),
+	_ => Error()
+};
+
+export fn input() => getline();

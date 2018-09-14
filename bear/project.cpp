@@ -14,15 +14,24 @@ void BearProjectHandler::setDirUrl(const QUrl &arg){
 		m_dirUrl = arg;
 		m_project = std::make_unique<BearProject>(std::filesystem::path(arg.toLocalFile().toStdString()));
 
+		QVector<QString> moduleNames_;
+		moduleNames_.reserve(m_project->modules().size());
+
+		for(auto &&module : m_project->modules()){
+			moduleNames_.push_back(QString::fromStdString(std::string(module.name())));
+		}
+
+		setModuleNames(std::move(moduleNames_));
+
 		emit dirUrlChanged();
 	}
 }
 
-const QVector<QUrl>& BearProjectHandler::modulePaths() const{ return m_modulePaths; }
+const QVector<QString>& BearProjectHandler::moduleNames() const{ return m_moduleNames; }
 
-void BearProjectHandler::setModulePaths(const QVector<QUrl> &arg){
-	m_modulePaths = arg;
-	emit modulePathsChanged();
+void BearProjectHandler::setModuleNames(const QVector<QString> &arg){
+	m_moduleNames = arg;
+	emit moduleNamesChanged();
 }
 
 void BearProjectHandler::openProject(const QUrl &dir){
@@ -61,10 +70,15 @@ BearProject::BearProject(const std::filesystem::path &dir_): m_dir{dir_}{
 				std::string moduleName, moduleVersion = "dev";
 				std::vector<BearProjectSource> moduleSources;
 
-				if(xml.attributes().hasAttribute("purson-version"))
-					moduleVersion = xml.attributes().value("purson-version").toString().toStdString();
-				else if(xml.attributes().hasAttribute("name"))
-					moduleName = xml.attributes().value("name").toString().toStdString();
+				foreach(auto &&attrib, xml.attributes()){
+					if(attrib.name() == "name"){
+						moduleName = attrib.value().toString().toStdString();
+						fmt::print("module name: {}\n", moduleName);
+					}
+					else if(attrib.name() == "purson-version"){
+						moduleVersion = attrib.value().toString().toStdString();
+					}
+				}
 
 				while(!xml.atEnd() && !xml.hasError()){
 					xml.readNext();

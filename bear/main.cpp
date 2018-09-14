@@ -48,6 +48,7 @@ int main(int argc, char *argv[]){
 
 	auto root = qobject_cast<QQuickWindow*>(engine.rootObjects().at(0));
 	auto openDialog = root->findChild<QObject*>(QStringLiteral("openDialog"));
+	auto tabBar = root->findChild<QQuickView*>(QStringLiteral("tabBar"));
 
 	QObject *textEdit = root->findChild<QObject*>(QStringLiteral("textEdit"));
 	QObject *lineNumbers = root->findChild<QObject*>(QStringLiteral("lineNumbers"));
@@ -60,12 +61,15 @@ int main(int argc, char *argv[]){
 	QQuickTextDocument *quickTextDocument = textEdit->property("textDocument").value<QQuickTextDocument *>();
 	QTextDocument *document = quickTextDocument->textDocument();
 
+	namespace fs = std::filesystem;
+
 	root->connect(
 		root,
 		&QQuickWindow::destroyed,
 		root,
 		[&]{
 			settings.setValue("openProject", project->dirUrl());
+			settings.setValue("openFile", QString::fromStdString(fs::path(documentHandler->fileUrl().toLocalFile().toStdString()).filename()));
 			settings.setValue("width", root->width());
 			settings.setValue("height", root->height());
 		}
@@ -76,15 +80,17 @@ int main(int argc, char *argv[]){
 		&BearProjectHandler::dirUrlChanged,
 		sources,
 		[&](){
-			fmt::print(stderr, "Project\n\tname: {}\n", project->project()->name());
-
 			moduleHeader->setProperty("text", QString::fromStdString(project->project()->name()));
 
 			QStringList modulePaths;
 
+			/*for(int i = 0; i < tabBar->count(); i++){
+				tabBar->removeTab(i);
+			}*/
+
 			for(auto &&source : project->project()->modules()[0].sources()){
 				auto dirStr = source.path().filename().string();
-				fmt::print(stderr, "\tmodule: {}\n", source.path().string());
+				//tabBar->addTab(nullptr, QString::fromStdString(dirStr));
 				modulePaths.push_back(QString::fromStdString(dirStr));
 			}
 
@@ -111,7 +117,7 @@ int main(int argc, char *argv[]){
 			try{
 				auto toks = purson::lex(
 					"dev",
-					documentHandler->fileUrl().toString().toStdString(),
+					documentHandler->fileUrl().toLocalFile().toStdString(),
 					document->toPlainText().toStdString()
 				);
 
@@ -125,6 +131,11 @@ int main(int argc, char *argv[]){
 	if(settings.contains("openProject")){
 		auto projectDir = settings.value("openProject");
 		project->openProject(projectDir.value<QUrl>());
+
+		if(settings.contains("openFile")){
+			auto openFile = settings.value("openFile");
+			documentHandler->setFileUrl(openFile.value<QUrl>());
+		}
 	}
 	else{
 		openDialog->setProperty("visible", true);

@@ -6,7 +6,7 @@
 
 #include "token.hpp"
 #include "exception.hpp"
-#include "expressions/base.hpp"
+#include "expressions/function.hpp"
 #include "types.hpp"
 
 namespace purson{
@@ -31,6 +31,15 @@ namespace purson{
 		const std::vector<token> &tokens,
 		const typeset *types = nullptr
 	);
+
+	inline std::vector<std::shared_ptr<const fn_expr>> getFns(const std::vector<std::shared_ptr<const expr>> &exprs){
+		std::vector<std::shared_ptr<const fn_expr>> ret;
+		for(auto &&expr : exprs){
+			if(auto fn = std::dynamic_pointer_cast<const fn_expr>(expr))
+				ret.push_back(std::move(fn));
+		}
+		return ret;
+	}
 }
 
 #endif // !PURSON_PARSER_HPP

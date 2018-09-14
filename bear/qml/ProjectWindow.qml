@@ -2,6 +2,7 @@ import QtQuick 2.11
 import QtQuick.Layouts 1.11
 import QtQuick.Dialogs 1.3
 import QtQuick.Controls 2.3
+import QtQuick.Controls.Material 2.4
 
 import Bear.Editor 1.0
 import "qrc:/qml" as BearQml
@@ -25,21 +26,28 @@ Page {
 		id: saveFileAction
 		text: "Save"
 		shortcut: "Ctrl+S"
-		onTriggered: document.saveFile(document.fileUrl)
+		onTriggered: {
+			document.saveFile(document.fileUrl);
+			lastActionResult.text = "Saved";
+		}
 	}
 
 	Action {
 		id: cutAction
 		text: "Cut"
 		shortcut: "Ctrl+X"
-		onTriggered: textEdit.cut()
+		onTriggered: {
+			textEdit.cut()
+		}
 	}
 
 	Action {
 		id: copyAction
 		text: "Copy"
 		shortcut: "Ctrl+C"
-		onTriggered: textEdit.copy()
+		onTriggered: {
+			textEdit.copy()
+		}
 	}
 
 	Action {
@@ -138,6 +146,17 @@ Page {
 	}
 
 	footer: ToolBar {
+		TextArea {
+			topPadding: bottomPadding
+			leftPadding: bottomPadding
+
+			background: Rectangle {
+				color: Qt.rgba(0,0,0,0);
+			}
+
+			id: lastActionResult
+			readOnly: true
+		}
 	}
 
 	Item {
@@ -211,6 +230,7 @@ Page {
 								}
 								else{
 									document.fileUrl = project.dirUrl + "/" + modelData;
+									fileName.text = modelData
 								}
 							}
 
@@ -230,21 +250,34 @@ Page {
 			}
 		}
 
-		TabBar {
-			id: bar
+		TextArea {
+			id: fileName
 
-			anchors.left: moduleListRoot.right
 			anchors.top: parent.top
+			anchors.left: moduleListRoot.right
 
-			TabButton {
-				text: "Untitled"
+			bottomPadding: 20
+			leftPadding: 20
+			topPadding: 20
+
+			text: "Untitled"
+			color: "lightgrey"
+
+			width: parent.width
+
+			background: Rectangle{
+				color: Qt.rgba(0.3, 0.3, 0.3, 1.0)
 			}
+
+			readOnly: true
+
+			font.pointSize: 12.0
 		}
 
 		ScrollView {
 			id: scrollView
 
-			anchors.top: bar.bottom
+			anchors.top: fileName.bottom
 			anchors.left: moduleListRoot.right
 			anchors.right: parent.right
 			anchors.bottom: parent.bottom
@@ -256,7 +289,7 @@ Page {
 
 			width: parent.width
 
-			contentHeight: textEdit.height
+			contentHeight: 100
 
 			Rectangle {
 				id: lineNumberBackground
@@ -322,15 +355,33 @@ Page {
 			}
 		}
 
+		Component {
+			id: tabButtonComp
+			TabButton {}
+		}
+
 		ProjectHandler {
 			id: project
 			objectName: "project"
+
+			onDirUrlChanged: {
+				var names = [];
+				moduleNames.forEach(function(elem){
+					names.push(elem);
+				});
+
+				moduleBox.model = names
+			}
 		}
 
 		DocumentHandler {
 			id: document
 			objectName: "document"
 			textDocument: textEdit.textDocument
+
+			onFileUrlChanged: {
+				fileName.text = document.fileUrl.toString()
+			}
 		}
 	}
 }
