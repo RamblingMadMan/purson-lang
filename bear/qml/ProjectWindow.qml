@@ -266,12 +266,14 @@ Page {
 				anchors.left: parent.left
 				anchors.top: parent.top
 				anchors.bottom: parent.bottom
-				width: 30
+				width: 35
 				height: parent.height
 
 				TextArea {
 					id: lineNumbers
 					objectName: "lineNumbers"
+
+					topPadding: 10
 
 					property int number: 0
 
@@ -286,7 +288,7 @@ Page {
 
 					font.family: "Monoid"
 					font.pointSize: 10.0
-					color: "#aaaaaa"
+					color: "#9d9d9d"
 					textFormat: TextEdit.PlainText
 				}
 			}

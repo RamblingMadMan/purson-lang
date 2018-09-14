@@ -20,6 +20,12 @@
 #include "texteditor.hpp"
 
 int main(int argc, char *argv[]){
+	QGuiApplication::setOrganizationName("Purson");
+	QGuiApplication::setOrganizationDomain("purson.io");
+	QGuiApplication::setApplicationName("Bear");
+
+	QSettings settings;
+
 	QGuiApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	QGuiApplication app(argc, argv);
 
@@ -40,7 +46,8 @@ int main(int argc, char *argv[]){
 
 	QQmlComponent component(&engine, "ListElement");
 
-	QObject *root = engine.rootObjects().at(0);
+	auto root = qobject_cast<QQuickWindow*>(engine.rootObjects().at(0));
+	auto openDialog = root->findChild<QObject*>(QStringLiteral("openDialog"));
 
 	QObject *textEdit = root->findChild<QObject*>(QStringLiteral("textEdit"));
 	QObject *lineNumbers = root->findChild<QObject*>(QStringLiteral("lineNumbers"));
@@ -52,6 +59,17 @@ int main(int argc, char *argv[]){
 
 	QQuickTextDocument *quickTextDocument = textEdit->property("textDocument").value<QQuickTextDocument *>();
 	QTextDocument *document = quickTextDocument->textDocument();
+
+	root->connect(
+		root,
+		&QQuickWindow::destroyed,
+		root,
+		[&]{
+			settings.setValue("openProject", project->dirUrl());
+			settings.setValue("width", root->width());
+			settings.setValue("height", root->height());
+		}
+	);
 
 	project->connect(
 		project,
@@ -103,6 +121,24 @@ int main(int argc, char *argv[]){
 			}
 		}
 	);
+
+	if(settings.contains("openProject")){
+		auto projectDir = settings.value("openProject");
+		project->openProject(projectDir.value<QUrl>());
+	}
+	else{
+		openDialog->setProperty("visible", true);
+	}
+
+	if(settings.contains("width")){
+		auto width = settings.value("width");
+		root->setWidth(width.value<int>());
+	}
+
+	if(settings.contains("height")){
+		auto height = settings.value("height");
+		root->setHeight(height.value<int>());
+	}
 
 	return app.exec();
 

@@ -7,16 +7,17 @@ import QtQuick.Controls.Material 2.4
 import "qrc:/qml"
 
 ApplicationWindow {
+	id: appWindow
+	objectName: "appWindow"
+
 	visible: true
 	minimumWidth: 640
 	minimumHeight: 480
-	width: 1280
-	height: 720
 	title: qsTr("Bear")
 
 	Material.theme: Material.Dark
-	Material.primary: Material.Brown
-	Material.accent: Material.Black
+	Material.primary: Material.Grey
+	Material.accent: Material.DeepOrange
 
 	ProjectWindow {
 		id: project
@@ -25,6 +26,7 @@ ApplicationWindow {
 
 	FileDialog {
 		id: openDialog
+		objectName: "openDialog"
 
 		title: "Choose a project directory"
 		folder: shortcuts.home
@@ -32,7 +34,5 @@ ApplicationWindow {
 		onAccepted: {
 			project.projectHandler.openProject(openDialog.folder)
 		}
-
-		Component.onCompleted: visible = true
 	}
 }

@@ -43,8 +43,6 @@ QUrl BearDocumentHandler::fileUrl() const{
 
 void BearDocumentHandler::setFileUrl(const QUrl &arg){
 	if(m_fileUrl != arg){
-		fmt::print(stderr, "LOAD DOCUMENT '{}'\n", arg.toString().toStdString());
-
 		m_fileUrl = arg;
 
 		QString fileName = arg.fileName();
@@ -59,9 +57,6 @@ void BearDocumentHandler::setFileUrl(const QUrl &arg){
 
 			emit documentTitleChanged();
 		}
-		else{
-			fmt::print(stderr, "LOAD DOCUMENT '{}'\n", arg.toString().toStdString());
-		}
 
 		emit fileUrlChanged();
 	}
@@ -70,18 +65,11 @@ void BearDocumentHandler::setFileUrl(const QUrl &arg){
 void BearDocumentHandler::saveFile(const QUrl &arg) const{
 	QFile file(arg.toLocalFile());
 
-	fmt::print(stderr, "SAVING DOCUMENT '{}' ... ", arg.toString().toStdString());
-
 	if(file.open(QFile::WriteOnly | QFile::Truncate)){
 		if(m_textDocument){
 			QTextStream out(&file);
 			out << m_textDocument->textDocument()->toPlainText();
 		}
-
-		fmt::print(stderr, "SUCCESS\n");
-	}
-	else{
-		fmt::print(stderr, "FAILED\n");
 	}
 }
 
