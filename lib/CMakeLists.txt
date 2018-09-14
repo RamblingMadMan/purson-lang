@@ -17,7 +17,7 @@ set(
 	llvm.cpp
 	module.cpp
 	compile_llvm/var.cpp
-)
+	parser/var.cpp compile_llvm/fn.cpp)
 
 set(
 	PURSON_HEADERS
@@ -42,7 +42,7 @@ set(
 	../include/purson/lexer.hpp
 	../include/purson/parser.hpp
 	../include/purson/module.hpp
-)
+	../include/purson/expressions/constant.hpp)
 
 add_library(purson ${PURSON_HEADERS} ${PURSON_SOURCES})
 

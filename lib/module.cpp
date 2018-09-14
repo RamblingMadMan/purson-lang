@@ -1,5 +1,7 @@
 #include <string>
 
+#include "fmt/core.h"
+
 #include "purson/expressions/function.hpp"
 #include "purson/module.hpp"
 
@@ -88,13 +90,19 @@ namespace purson{
 			}
 
 			void *get_fn_ptr(std::string_view mangled_name) override{
+				auto fnPtr = m_mod->getFunction(std::string(mangled_name));
+				if(fnPtr){
+					fmt::print("found fn {}\n", fnPtr->getName().str());
+				}
+
 				return nullptr;
 			}
 			
 			void compile(const std::vector<std::shared_ptr<const expr>> &ast) override{
 				std::vector<llvm::Value*> values;
-				for(auto &&ptr : ast)
-					values.emplace_back(llvm_compile(ptr.get(), &m_global_state));
+				for(auto &&ptr : ast){
+					if(ptr) values.emplace_back(llvm_compile(ptr.get(), &m_global_state));
+				}
 			}
 
 			void write(std::string_view path) override{
@@ -143,8 +151,10 @@ namespace purson{
 				  [this](llvm::Function &f){ return std::set<llvm::Function*>{&f}; },
 				  *compileCallbackManager,
 				  llvm::orc::createLocalIndirectStubsManagerBuilder(tm->getTargetTriple())
-			  ),
-			  mapLayer(codLayer){
+			  )
+			  //, mapLayer(codLayer)
+			  {
+				llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
 				//mapLayer.setGlobalMapping("pursonEcho", (std::uintptr_t)pursonEcho);
 				//mapLayer.setGlobalMapping("pursonStr", (std::uintptr_t)pursonStr);
 				//mapLayer.setGlobalMapping("pursonPrint", (std::uintptr_t)pursonPrint);
@@ -156,7 +166,7 @@ namespace purson{
 			~llvm_moduleset(){}
 
 			void set_fn_ptr(std::string_view identifier, void *fn_ptr) override{
-				mapLayer.setGlobalMapping(std::string(identifier), llvm::JITTargetAddress(fn_ptr));
+				//codLayer.setGlobalMapping(std::string(identifier), llvm::JITTargetAddress(fn_ptr));
 			}
 
 			void *get_fn_ptr(std::string_view mangled_name) override{
@@ -164,13 +174,14 @@ namespace purson{
 				std::string llvmName;
 				llvm::raw_string_ostream str(llvmName);
 				llvm::Mangler::getNameWithPrefix(str, name, dl);
-				llvm::JITSymbol fn = nullptr;
+
 				for(auto &&mod : m_mod_handles){
-					fn = mapLayer.findSymbolIn(mod, str.str(), false);
-					if(fn) break;
+					llvm::JITSymbol fn = mod->findSymbol(optimizeLayer, str.str(), true);
+					if(fn)
+						return reinterpret_cast<void*>(fn.getAddress().get());
 				}
-				auto bits = fn ? fn.getAddress().get() : 0;
-				return reinterpret_cast<void*>(bits);
+
+				return nullptr;
 			}
 			
 			jit_module *create_module(std::string_view name, const std::vector<std::shared_ptr<const expr>> &ast) override{
@@ -184,19 +195,27 @@ namespace purson{
 				m_mods.emplace_back(std::unique_ptr<llvm_module>(mod));
 
 				auto resolver = llvm::orc::createLambdaResolver(
-						[this](const std::string &name){
-							if(auto sym = mapLayer.findSymbol(name, false))
-								return sym;
-							return llvm::JITSymbol(nullptr);
+						[this](const std::string &name) -> llvm::JITSymbol{
+							auto sym = codLayer.findSymbol(name, false);
+							if(sym) return sym;
+							else if(auto err = sym.takeError())
+								return std::move(err);
+
+							return nullptr;
 						},
-						[](const std::string &name){
+						[](const std::string &name) -> llvm::JITSymbol{
 							if(auto symAddr = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name))
 								return llvm::JITSymbol(symAddr, llvm::JITSymbolFlags::Exported);
-							return llvm::JITSymbol(nullptr);
+							return nullptr;
 						}
 				);
 
-				auto &&module_handle = m_mod_handles.emplace_back(cantFail(mapLayer.addModule(mod->module(), std::move(resolver))));
+				auto res = codLayer.addModule(mod->module(), std::move(resolver));
+				if(!res)
+					throw module_error{"failed to add module"};
+
+				auto &&module_handle = m_mod_handles.emplace_back(*res);
+
 				return m_mod_ptrs.emplace_back(mod);
 			}
 			
@@ -209,7 +228,7 @@ namespace purson{
 				
 				auto dist = std::distance(begin(m_mods), res);
 				
-				cantFail(mapLayer.removeModule(m_mod_handles[dist]));
+				cantFail(codLayer.removeModule(m_mod_handles[dist]));
 				
 				m_mods.erase(res);
 				m_mod_handles.erase(begin(m_mod_handles) + dist);
@@ -232,14 +251,14 @@ namespace purson{
 			mutable llvm::orc::IRCompileLayer<decltype(objectLayer), llvm::orc::SimpleCompiler> compileLayer;
 
 			using optimize_function = std::function<std::shared_ptr<llvm::Module>(std::shared_ptr<llvm::Module>)>;
+			mutable llvm::orc::IRTransformLayer<decltype(compileLayer), optimize_function> optimizeLayer;
 
 			std::unique_ptr<llvm::orc::JITCompileCallbackManager> compileCallbackManager;
 
-			mutable llvm::orc::IRTransformLayer<decltype(compileLayer), optimize_function> optimizeLayer;
 			mutable llvm::orc::CompileOnDemandLayer<decltype(optimizeLayer)> codLayer;
-			mutable llvm::orc::GlobalMappingLayer<decltype(codLayer)> mapLayer;
+			//mutable llvm::orc::GlobalMappingLayer<decltype(codLayer)> mapLayer;
 
-			using module_handle_t = decltype(mapLayer)::ModuleHandleT;
+			using module_handle_t = decltype(codLayer)::ModuleHandleT;
 			
 			std::vector<std::unique_ptr<llvm_module>> m_mods;
 			std::vector<module_handle_t> m_mod_handles;
@@ -254,8 +273,9 @@ namespace purson{
 				fpm->add(llvm::createCFGSimplificationPass());
 				fpm->doInitialization();
 
-				for(auto &f : *m)
+				for(auto &f : *m){
 					fpm->run(f);
+				}
 
 				fpm->doFinalization();
 				return m;
@@ -263,7 +283,6 @@ namespace purson{
 	};
 	
 	std::unique_ptr<jit_moduleset> make_jit_moduleset(target t){
-		auto ret = new llvm_moduleset(t);
-		return std::unique_ptr<jit_moduleset>(ret);
+		return std::unique_ptr<jit_moduleset>(new llvm_moduleset(t));
 	}
 }

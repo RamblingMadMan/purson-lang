@@ -1,5 +1,5 @@
 ![Purson 
-Logo](https://image.ibb.co/ng9iGo/purson_Lion_Red_Very_Small.png)
+Logo](https://image.ibb.co/mKQ1C9/lions_head.png)
 
 # Purson
 Strongly typed, functional, general purpose programming language.

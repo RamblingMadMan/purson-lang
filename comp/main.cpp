@@ -59,10 +59,11 @@ int main(int argc, char *argv[]){
 
 	auto unit_ty = types->unit();
 	auto int32_ty = types->integer(32);
+	auto uint32_ty = types->natural(32);
 
 	auto fn_ty = types->function(unit_ty, {int32_ty});
 
-	auto main_fn_name = purson::mangle_fn_name("main", unit_ty, {});
+	auto main_fn_name = purson::mangle_fn_name("main", int32_ty, {});
 
 	modules->set_fn_ptr("f1i32u0println", reinterpret_cast<void*>(f1i32u0println));
 
@@ -92,9 +93,8 @@ int main(int argc, char *argv[]){
 		//module->write(output_file);
 	}
 
-	auto main_fn = modules->get_fn_ptr(main_fn_name);
-	if(!main_fn){
-		fmt::print(stderr, "could not find function '{}' in moduleset\n", main_fn_name);
-		return EXIT_FAILURE;
+	auto mainFn = modules->get_fn_ptr(main_fn_name);
+	if(!mainFn){
+		fmt::print(stderr, "could not find main function '{}'\n", main_fn_name);
 	}
 }
