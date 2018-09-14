@@ -93,11 +93,13 @@ class BearProjectHandler: public QObject{
 
 		Q_PROPERTY(QUrl dirUrl READ dirUrl WRITE setDirUrl NOTIFY dirUrlChanged)
 		Q_PROPERTY(QVector<QString> moduleNames READ moduleNames WRITE setModuleNames NOTIFY moduleNamesChanged)
+		Q_PROPERTY(QString name READ name)
 
 	public:
 		QUrl dirUrl() const;
 		const QVector<QString> &moduleNames() const;
 		BearProject *project(){ return m_project.get(); }
+		QString name() const{ return QString::fromStdString(m_project->name()); };
 
 	public slots:
 		void setDirUrl(const QUrl &arg);

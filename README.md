@@ -1,5 +1,4 @@
-![Purson 
-Logo](https://image.ibb.co/mKQ1C9/lions_head.png)
+<a href="http://purson.io/"><img src="http://purson.io/img/lions-head.png" alt="drawing" width="128"/></a>
 
 # Purson
 Strongly typed, functional, general purpose programming language.
@@ -14,9 +13,9 @@ The language is designed to be quick to write, beautiful to look at and easy to 
 Here is a variation of the classic Hello World example:
 
 ```
-let io = import("io");
+let IO = import("IO");
 
-fn main() => io.output("Hello, " + io.input() + "!");
+fn main() => IO.output("Hello, " + IO.input() + "!");
 ```
 
 ## Language Features
@@ -33,7 +32,7 @@ Highly unfinished IDE for Purson projects.
 
 To test, when it opens up point it to the `purson/testing/Main` directory.
 
-![Bear Screenshot](https://image.ibb.co/bwPwvU/bear_Early.png)
+![Bear Screenshot](http://purson.io/img/bearEarly.png)
 
 #### Features
 

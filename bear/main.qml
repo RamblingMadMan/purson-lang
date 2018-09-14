@@ -21,6 +21,7 @@ ApplicationWindow {
 
 	ProjectWindow {
 		id: project
+		objectName: "project"
 		fileDialog: openDialog
 	}
 
@@ -34,5 +35,9 @@ ApplicationWindow {
 		onAccepted: {
 			project.projectHandler.openProject(openDialog.folder)
 		}
+	}
+
+	onClosing: {
+		project.destroy()
 	}
 }

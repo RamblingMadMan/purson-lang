@@ -8,7 +8,8 @@ import Bear.Editor 1.0
 import "qrc:/qml" as BearQml
 
 Page {
-	id: bear
+	id: projectWindow
+	objectName: "projectWindow"
 
 	anchors.fill: parent
 
@@ -176,7 +177,7 @@ Page {
 			horizontalAlignment: Text.AlignHCenter
 
 			topPadding: 10
-			text: "Modules"
+			text: "Untitled"
 			color: "#aaaaaa"
 			font.pointSize: 16
 		}
@@ -361,7 +362,7 @@ Page {
 
 		ProjectHandler {
 			id: project
-			objectName: "project"
+			objectName: "projectHandler"
 
 			onDirUrlChanged: {
 				var names = [];
@@ -370,12 +371,13 @@ Page {
 				});
 
 				moduleBox.model = names
+				moduleListHeader.text = name
 			}
 		}
 
 		DocumentHandler {
 			id: document
-			objectName: "document"
+			objectName: "documentHandler"
 			textDocument: textEdit.textDocument
 
 			onFileUrlChanged: {
