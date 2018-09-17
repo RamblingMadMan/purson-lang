@@ -87,9 +87,8 @@ int main(int argc, char *argv[]){
 		auto toks = purson::lex(revision, input_files[i], src);
 		auto exps = purson::parse(revision, toks);
 
-		auto &&module = jit_modules.emplace_back(modules->create_module(input_files[i]));
+		auto &&module = jit_modules.emplace_back(modules->create_module(input_files[i], exps));
 		module->register_func("f1i32u0println", reinterpret_cast<void*>(f1i32u0println), fn_ty);
-		module->compile(exps);
 		//module->write(output_file);
 	}
 
