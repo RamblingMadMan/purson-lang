@@ -65,34 +65,46 @@ fn repl(){
 
 Then the value result of the expression is printed.
 
-## Dependencies
+## Getting Bear
 
 A few dependencies are required to build/run the Purson components.
 
-### Required Libraries
+#### Required Libraries
 
 * GMP
 * MPFR
 * ICU
 * Readline
-* LLVM
+* LLVM 6
 
-### Additional Bear Libraries
+#### Required Bear Libraries
 
-* Qt 5
+* Qt 5.11
 
-## Building
+### Getting a binary
 
-Purson was mainly developed on a linux box so instructions follow as such, but all commands have windows alternatives.
+If you are on Linux there are binary packages available at http://purson.io/
 
-A simple build will go something like this:
+### Building from source
+
+Most of the time this is the way you will get Purson because it's in very early development. Before compiling a few packages will be required. Here's how to get them on some common platforms:
+
+##### Ubuntu/Debian
+```bash
+sudo apt install cmake llvm-7-dev libgmp-dev libmpfr-dev libreadline-dev \
+qtdeclarative5-dev qtquickcontrols2-5-dev
+```
+
+#### Building
+
+A full build of all Purson components will go something like this (run from root source dir):
 
 ```bash
 git submodule update --init --
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j4
+cmake --build . -- -j7
 ```
 
 Then to run the REPL:
