@@ -71,6 +71,7 @@ A few dependencies are required to build/run the Purson components.
 
 #### Required Libraries
 
+* Boost (filesystem)
 * GMP
 * MPFR
 * ICU
@@ -91,7 +92,7 @@ Most of the time this is the way you will get Purson because it's in very early 
 
 ##### Ubuntu/Debian
 ```bash
-sudo apt install cmake llvm-7-dev libgmp-dev libmpfr-dev libreadline-dev \
+sudo apt install cmake libboost-filesystem-dev llvm-7-dev libgmp-dev libmpfr-dev libreadline-dev \
 qtdeclarative5-dev qtquickcontrols2-5-dev
 ```
 
