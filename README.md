@@ -22,7 +22,7 @@ fn main() => IO.output("Hello, " + IO.input() + "!");
 
 - Type inference
 - Pattern matching
-- Automatic differentiation
+- Parametric polymorphism
 - Dynamic code generation
 
 ## Components
