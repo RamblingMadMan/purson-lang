@@ -88,13 +88,7 @@ If you are on Linux there are binary packages available at http://purson.io/
 
 ### Building from source
 
-Most of the time this is the way you will get Purson because it's in very early development. Before compiling a few packages will be required. Here's how to get them on some common platforms:
-
-##### Ubuntu/Debian
-```bash
-sudo apt install cmake libboost-filesystem-dev libicu-dev llvm-7-dev libgmp-dev \
-libmpfr-dev libreadline-dev qtdeclarative5-dev qtquickcontrols2-5-dev
-```
+Most of the time this is the way you will get Purson because it's in very early development.
 
 #### Building
 
