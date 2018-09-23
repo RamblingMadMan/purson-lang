@@ -89,9 +89,6 @@ If you are on Linux there are binary packages available at http://purson.io/
 ### Building from source
 
 Most of the time this is the way you will get Purson because it's in very early development.
-
-#### Building
-
 A full build of all Purson components will go something like this (run from root source dir):
 
 ```bash
