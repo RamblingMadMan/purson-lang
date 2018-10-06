@@ -65,7 +65,7 @@ fn repl(){
 
 Then the value result of the expression is printed.
 
-## Getting Bear
+## Getting Purson
 
 A few dependencies are required to build/run the Purson components.
 
